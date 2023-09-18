@@ -4,7 +4,7 @@ from envs.multi_agent_env import SimpleEnv
 env = SimpleEnv(render_mode="human")
 env = AutoControlWrapper(env)
 
-env.reset()
+env.reset(seed=42)
 env.render()
 
 print(env.observation_space)

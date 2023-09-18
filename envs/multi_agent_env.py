@@ -44,6 +44,7 @@ class SimpleEnv(MultiGridEnv):
             agents=agents,
             agent_view_size=view_size,
         )
+        self.carrying = None
 
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
