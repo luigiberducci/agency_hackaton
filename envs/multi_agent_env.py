@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gymnasium
 
 from gym_multigrid.multigrid import (
     MultiGridEnv,
@@ -46,6 +47,16 @@ class SimpleEnv(MultiGridEnv):
         )
         self.carrying = None
 
+        original_action_space = self.action_space
+        self.action_space = gymnasium.spaces.Dict({
+            f"agent_{i}": original_action_space for i in range(num_agents)
+        })
+
+        original_observation_space = self.observation_space
+        self.observation_space = gymnasium.spaces.Dict({
+            f"agent_{i}": original_observation_space for i in range(num_agents)
+        })
+
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
 
@@ -88,6 +99,17 @@ class SimpleEnv(MultiGridEnv):
             else:
                 goal_pos = self.place_obj(Goal(self.world, i), max_tries=100)
             self.goals.append(goal_pos)
+
+    def step(self, actions):
+        # convert from dict to list
+        actions = [actions[f"agent_{i}"] for i in range(self.num_agents)]
+
+        obs, reward, done, truncated, info = super().step(actions)
+
+        # convert from list to dict
+        obs = {f"agent_{i}": obs[i] for i in range(self.num_agents)}
+
+        return obs, reward, done, truncated, info
 
 
 def main():
