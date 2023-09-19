@@ -3,7 +3,7 @@ name: Run Example
 on:
   pull_request:
     branches:
-      - main  # The branch to which PRs are being made
+      - main
 
 jobs:
   test-python-script:
@@ -18,10 +18,10 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: '3.10'  # Install the python version needed, e.g., '3.8', '3.9', '3.x'
-        cache: 'pip'  # Cache pip dependencies
+        python-version: '3.10'
+        cache: 'pip'
     - name: Install dependencies
-      run: pip install -r requirements.txt  # Add other dependencies here if needed
+      run: pip install -r requirements.txt
 
     - name: Run script
-      run: PYTHONPATH=. python examples/example.py  # Run the script
+      run: PYTHONPATH=. python examples/example.py
