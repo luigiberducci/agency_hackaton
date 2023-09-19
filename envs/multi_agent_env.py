@@ -98,7 +98,7 @@ def main():
 
     done, truncated = False, False
     while not done and not truncated:
-        actions = env.action_space.sample()
+        actions = [env.action_space.sample()]
         obs, reward, done, truncated, info = env.step(actions)
         env.render()
         print("reward: {}, done: {}".format(reward, done))
