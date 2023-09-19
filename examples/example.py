@@ -5,7 +5,7 @@ import numpy as np
 from envs.control_wrapper import AutoControlWrapper
 from envs.multi_agent_env import SimpleEnv
 
-env = SimpleEnv(render_mode="human")
+env = SimpleEnv(render_mode="human", num_agents=2)
 env = AutoControlWrapper(env)
 
 seed = 42

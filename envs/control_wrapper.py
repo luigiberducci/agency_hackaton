@@ -81,24 +81,43 @@ class AutoControlWrapper(gymnasium.Wrapper):
     is controlled by a simple heuristic to navigate towards its goal.
     """
 
-    def __init__(self, env):
+    def __init__(self, env, n_auto_agents=1):
         super().__init__(env)
         self.planner = Planner(env=env)
+        self.n_auto_agents = n_auto_agents
 
-    def step(self, action) -> ActType:
+        # get the ids of the agents, separate them into controllable and non-controllable
+        agents_ids = self.env.action_space.spaces.keys()
+        self.contr_agent_ids = list(agents_ids)[:len(agents_ids) - n_auto_agents]
+        self.auto_agent_ids = list(agents_ids)[len(agents_ids) - n_auto_agents:]
+
+        # restrict action space to controllable agents
+        original_action_space = self.action_space   # dict
+        self.action_space = gymnasium.spaces.Dict({k: original_action_space[k] for k in self.contr_agent_ids})
+
+        # restrict observation space to controllable agents
+        original_observation_space = self.observation_space   # dict
+        self.observation_space = gymnasium.spaces.Dict({k: original_observation_space[k] for k in self.contr_agent_ids})
+
+
+    def step(self, actions) -> ActType:
+        assert isinstance(actions, dict)
+
         # extend single-agent action with auto-controlled agents
-        actions = [action]
-        for i in range(1, len(self.env.agents)):
+        n_agents = len(self.env.agents)
+        for i in range(n_agents - self.n_auto_agents, n_agents):
             pos, dir = self.env.agents[i].pos, self.env.agents[i].dir
             goal = self.env.goals[i]
-            action = self.planner.plan(pos, dir, goal)
-            actions.append(action)
+            act = self.planner.plan(pos, dir, goal)
+
+            iauto = i - (n_agents - self.n_auto_agents)
+            actions[self.auto_agent_ids[iauto]] = act
 
         # step env
         obs, reward, done, truncated, info = super().step(actions)
 
         # filter out observations of auto-controlled agents
-        obs = obs[0]
-        reward = reward[0]
+        obs = {k: obs[k] for k in self.contr_agent_ids}
+        reward = reward[:n_agents - self.n_auto_agents]
 
         return obs, reward, done, truncated, info
