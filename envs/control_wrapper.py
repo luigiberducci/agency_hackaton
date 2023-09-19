@@ -99,5 +99,6 @@ class AutoControlWrapper(gymnasium.Wrapper):
 
         # filter out observations of auto-controlled agents
         obs = obs[0]
+        reward = reward[0]
 
         return obs, reward, done, truncated, info
