@@ -89,9 +89,10 @@ class AutoControlWrapper(gymnasium.ActionWrapper):
     is controlled by a simple heuristic to navigate towards its goal.
     """
 
-    def __init__(self, env):
+    def __init__(self, env, prob_slip=0.25):
         super().__init__(env)
         self.planner = Planner(env=env)
+        self.prob_slip = prob_slip
 
     def action(self, action) -> ActType:
         actions = [action]
@@ -99,5 +100,12 @@ class AutoControlWrapper(gymnasium.ActionWrapper):
             pos, dir = self.env.agents[i].pos, self.env.agents[i].dir
             goal = self.env.goals[i]
             action = self.planner.plan(pos, dir, goal)
+
+            # add noise
+            if np.random.random() < self.prob_slip:
+                action = np.random.randint(1, 4)
+
             actions.append(action)
         return actions
+    
+
