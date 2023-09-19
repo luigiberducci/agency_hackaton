@@ -66,6 +66,8 @@ class SimpleEnv(MultiGridEnv):
         self.grid.set(6, 4, Door(self.world, COLOR_NAMES[0], is_locked=True))
         self.grid.set(13, 1, Key(self.world, COLOR_NAMES[0]))
 
+        self.goals = []
+        
         # Randomize the player start position, orientation and goal
         for i in range(self.num_agents):
             # agent
