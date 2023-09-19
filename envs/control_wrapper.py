@@ -81,10 +81,11 @@ class AutoControlWrapper(gymnasium.Wrapper):
     is controlled by a simple heuristic to navigate towards its goal.
     """
 
-    def __init__(self, env, n_auto_agents=1):
+    def __init__(self, env, n_auto_agents=1, action_noise=0.25):
         super().__init__(env)
         self.planner = Planner(env=env)
         self.n_auto_agents = n_auto_agents
+        self.action_noise = action_noise
 
         # get the ids of the agents, separate them into controllable and non-controllable
         agents_ids = self.env.action_space.spaces.keys()
@@ -106,12 +107,18 @@ class AutoControlWrapper(gymnasium.Wrapper):
         # extend single-agent action with auto-controlled agents
         n_agents = len(self.env.agents)
         for i in range(n_agents - self.n_auto_agents, n_agents):
+            iauto = i - (n_agents - self.n_auto_agents)
+            agent_id = self.auto_agent_ids[iauto]
+
             pos, dir = self.env.agents[i].pos, self.env.agents[i].dir
             goal = self.env.goals[i]
             act = self.planner.plan(pos, dir, goal)
 
-            iauto = i - (n_agents - self.n_auto_agents)
-            actions[self.auto_agent_ids[iauto]] = act
+            # add noise
+            if np.random.random() < self.action_noise:
+                act = self.env.action_space[agent_id].sample()
+
+            actions[agent_id] = act
 
         # step env
         obs, reward, done, truncated, info = super().step(actions)
