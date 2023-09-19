@@ -115,7 +115,7 @@ class SimpleEnv(MultiGridEnv):
         return obs, reward, done, truncated, info
 
     def reset(self, seed=None, options=None):
-        obs, info = super().reset(seed, options)
+        obs, info = super().reset(seed=seed, options=options)
 
         # convert from list to dict
         obs = {f"agent_{i}": obs[i] for i in range(self.num_agents)}
