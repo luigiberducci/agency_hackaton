@@ -21,7 +21,6 @@ class SimpleEnv(MultiGridEnv):
         width: int = 15,
         height: int = 7,
         num_agents: int = 2,
-        view_size: int = 7,
         max_steps: int = 1000,
         **kwargs,
     ):
@@ -32,7 +31,7 @@ class SimpleEnv(MultiGridEnv):
 
         agents = []
         for i in range(num_agents):
-            agent = Agent(self.world, i, view_size=view_size)
+            agent = Agent(self.world, i)
             agents.append(agent)
 
         super().__init__(
@@ -42,7 +41,7 @@ class SimpleEnv(MultiGridEnv):
             max_steps=max_steps,
             see_through_walls=False,  # Set this to True for maximum speed
             agents=agents,
-            agent_view_size=view_size,
+            partial_obs=False,
         )
         self.carrying = None
 
