@@ -1,1 +1,3 @@
 matplotlib
+gymnasium
+./gym-multigrid
