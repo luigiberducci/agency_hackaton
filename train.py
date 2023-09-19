@@ -32,12 +32,12 @@ def make_trainer(algo: str):
 
 
 def main(args):
-    env_id = "door-2-agents-v0"
-    algo = "ppo"
-    outdir = "logs/"
-    seed = 42
-    total_timesteps = 100000
-    eval_freq = 1000
+    env_id = args.env_id
+    algo = args.algo
+    seed = args.seed
+    total_timesteps = args.total_timesteps
+    eval_freq = args.eval_freq
+    outdir = args.outdir
 
     # create environments and trainer
     train_env = make_env(env_id=env_id)
@@ -69,6 +69,12 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--env-id", type=str, default="door-2-agents-v0")
+    parser.add_argument("--algo", type=str, default="ppo")
+    parser.add_argument("--outdir", type=str, default="logs/")
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--total-timesteps", type=int, default=100000)
+    parser.add_argument("--eval-freq", type=int, default=1000)
     args = parser.parse_args()
 
     main(args)
