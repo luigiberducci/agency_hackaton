@@ -65,14 +65,6 @@ class Planner:
                 cost += self.cost(pos_, dir_, goal)
                 costs.append(cost)
 
-                # debug - visualize the action sequence and trajectory
-                #import matplotlib.pyplot as plt
-                #plt.figure()
-                #plt.plot([p[0] for p in traj], [p[1] for p in traj], color="red")
-                #plt.scatter(traj[0][0], traj[0][1], color="green")
-                #plt.gca().invert_yaxis()
-                #plt.show()
-
             costs = np.array(costs)
             topk = np.argsort(costs)[:self.k]
             action_seqs = action_seqs[topk]
@@ -83,7 +75,7 @@ class Planner:
         return int(action_seqs[0][0])
 
 
-class AutoControlWrapper(gymnasium.ActionWrapper):
+class AutoControlWrapper(gymnasium.Wrapper):
     """
     Converts single-agent actions to multi-agent actions, where each non-controllable agent
     is controlled by a simple heuristic to navigate towards its goal.
@@ -93,11 +85,20 @@ class AutoControlWrapper(gymnasium.ActionWrapper):
         super().__init__(env)
         self.planner = Planner(env=env)
 
-    def action(self, action) -> ActType:
+    def step(self, action) -> ActType:
+        # extend single-agent action with auto-controlled agents
         actions = [action]
         for i in range(1, len(self.env.agents)):
             pos, dir = self.env.agents[i].pos, self.env.agents[i].dir
             goal = self.env.goals[i]
             action = self.planner.plan(pos, dir, goal)
             actions.append(action)
-        return actions
+
+        # step env
+        obs, reward, done, truncated, info = super().step(actions)
+
+        # filter out observations of auto-controlled agents
+        obs = obs[0]
+        reward = reward[0]
+
+        return obs, reward, done, truncated, info
