@@ -1,6 +1,3 @@
-[submodule "Minigrid"]
-	path = Minigrid
-	url = https://github.com/luigiberducci/Minigrid
 [submodule "gym-multigrid"]
 	path = gym-multigrid
 	url = https://github.com/luigiberducci/gym-multigrid.git
