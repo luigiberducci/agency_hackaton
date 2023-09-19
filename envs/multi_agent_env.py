@@ -24,6 +24,7 @@ class SimpleEnv(MultiGridEnv):
         num_agents: int = 2,
         view_size: int = 7,
         max_steps: int = 1000,
+        render_mode: str = None,
         **kwargs,
     ):
         self.num_agents = num_agents
@@ -44,6 +45,7 @@ class SimpleEnv(MultiGridEnv):
             see_through_walls=False,  # Set this to True for maximum speed
             agents=agents,
             agent_view_size=view_size,
+            render_mode=render_mode,
         )
         self.carrying = None
 
@@ -56,6 +58,8 @@ class SimpleEnv(MultiGridEnv):
         self.observation_space = gymnasium.spaces.Dict({
             f"agent_{i}": original_observation_space for i in range(num_agents)
         })
+
+        self.render_mode = render_mode
 
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
@@ -110,7 +114,6 @@ class SimpleEnv(MultiGridEnv):
         obs = {f"agent_{i}": obs[i] for i in range(self.num_agents)}
 
         return obs, reward, done, truncated, info
-
 
 def main():
     env = SimpleEnv(render_mode="human")
