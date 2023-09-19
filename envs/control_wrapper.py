@@ -128,3 +128,19 @@ class AutoControlWrapper(gymnasium.Wrapper):
         reward = reward[:n_agents - self.n_auto_agents]
 
         return obs, reward, done, truncated, info
+
+
+class FlattenDiscreteAction(gymnasium.ActionWrapper):
+    """Action wrapper that flattens the action."""
+
+    def __init__(self, env):
+        super(FlattenDiscreteAction, self).__init__(env)
+        # convert dict space of discrete actions to a large discrete space
+        self.first_agent = list(self.action_space.spaces.keys())[0]
+        self.action_space = self.action_space.spaces[self.first_agent]
+
+    def action(self, action):
+        return {self.first_agent: action}
+
+    def reverse_action(self, action):
+        return action[self.first_agent]

@@ -13,9 +13,13 @@ def make_env(env_id: str):
     import envs
     import gymnasium as gym
     from envs.control_wrapper import AutoControlWrapper
+    from envs.control_wrapper import FlattenDiscreteAction
+    from gymnasium.wrappers import FlattenObservation
 
     env = gym.make(env_id)
     env = AutoControlWrapper(env)
+    env = FlattenDiscreteAction(env)
+    env = FlattenObservation(env)
 
     return env
 
@@ -43,7 +47,7 @@ def main(args):
     eval_callback = EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq)
 
     model = trainer_fn(
-        "CnnPolicy", train_env, seed=seed, tensorboard_log=logdir, verbose=1
+        "MlpPolicy", train_env, seed=seed, tensorboard_log=logdir, verbose=1
     )
 
     # train model
