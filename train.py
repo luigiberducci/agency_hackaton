@@ -1,3 +1,5 @@
+import datetime
+
 from stable_baselines3.common.callbacks import EvalCallback
 import stable_baselines3
 import numpy as np
@@ -43,7 +45,8 @@ def main(args):
     trainer_fn = make_trainer(algo)
 
     # setup logdir and evaluation callbacks
-    logdir = f"{outdir}/{algo}-{env_id}"
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+    logdir = f"{outdir}/{algo}-{env_id}-{date_str}"
     eval_callback = EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq)
 
     model = trainer_fn(
