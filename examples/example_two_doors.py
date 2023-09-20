@@ -6,7 +6,7 @@ import envs  # keep it, otherwise gym.make() won't work on custom envs
 from envs.control_wrapper import AutoControlWrapper
 
 
-env = gym.make("one-door-2-agents-v0")
+env = gym.make("two-doors-v0", render_mode="human")
 env = AutoControlWrapper(env)
 
 seed = 42
