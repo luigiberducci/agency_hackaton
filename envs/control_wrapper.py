@@ -167,4 +167,5 @@ class UnwrapSingleAgentDictWrapper(gymnasium.Wrapper):
     def step(self, action):
         action = {self.agent_id: action}
         obs, reward, done, truncated, info = super().step(action)
+        reward = float(reward)
         return obs[self.agent_id], reward, done, truncated, info

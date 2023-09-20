@@ -5,6 +5,13 @@ import stable_baselines3
 import numpy as np
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.utils import set_random_seed
+from stable_baselines3.common.vec_env import SubprocVecEnv
+
+import envs
+import gymnasium as gym
+from envs.control_wrapper import AutoControlWrapper
+from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 
 trainer_fns = {
     "ppo": stable_baselines3.PPO,
@@ -12,18 +19,16 @@ trainer_fns = {
 }
 
 
-def make_env(env_id: str):
-    import envs
-    import gymnasium as gym
-    from envs.control_wrapper import AutoControlWrapper
-    from envs.control_wrapper import UnwrapSingleAgentDictWrapper
+def make_env(env_id: str, rank: int, seed: int = 42):
+    def make() -> gym.Env:
+        env = gym.make(env_id)
+        env = AutoControlWrapper(env, n_auto_agents=1)
+        env = UnwrapSingleAgentDictWrapper(env)
+        env.reset(seed=seed + rank)
+        return env
 
-    env = gym.make(env_id)
-    env = AutoControlWrapper(env, n_auto_agents=1)
-    env = UnwrapSingleAgentDictWrapper(env)
-    env = Monitor(env)
-
-    return env
+    set_random_seed(seed)
+    return make
 
 
 def make_trainer(algo: str):
@@ -33,20 +38,29 @@ def make_trainer(algo: str):
 
 def main(args):
     env_id = args.env_id
+    num_envs = args.num_envs
     algo = args.algo
     seed = args.seed
     total_timesteps = args.total_timesteps
     eval_freq = args.eval_freq
     outdir = args.outdir
 
+    # set seed
+    if seed is None:
+        seed = np.random.randint(0, 1e6)
+
     # create environments and trainer
-    train_env = make_env(env_id=env_id)
-    eval_env = make_env(env_id=env_id)
+    train_env = SubprocVecEnv([make_env(env_id, i) for i in range(num_envs)])
     trainer_fn = make_trainer(algo)
 
+    # create evaluation environment
+    eval_env = make_env(env_id=env_id, rank=0, seed=42)()
+    eval_env = Monitor(eval_env)
+
+
     # setup logdir and evaluation callbacks
-    date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
-    logdir = f"{outdir}/{algo}-{env_id}-{date_str}"
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    logdir = f"{outdir}/{algo}-{env_id}-{date_str}-{seed}"
     eval_callback = EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq)
 
     model = trainer_fn(
@@ -69,12 +83,13 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env-id", type=str, default="door-2-agents-v0")
-    parser.add_argument("--algo", type=str, default="ppo")
-    parser.add_argument("--outdir", type=str, default="logs/")
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--total-timesteps", type=int, default=100000)
-    parser.add_argument("--eval-freq", type=int, default=1000)
+    parser.add_argument("--env-id", type=str, default="door-2-agents-v0", help="Env ID as registered in Gymnasium")
+    parser.add_argument("--num-envs", type=int, default=2, help="Number of vectorized environments")
+    parser.add_argument("--algo", type=str, default="ppo", help="Algorithm to use")
+    parser.add_argument("--outdir", type=str, default="logs/", help="Directory to store logs")
+    parser.add_argument("--seed", type=int, default=None, help="Random seed")
+    parser.add_argument("--total-timesteps", type=int, default=100000, help="Total number of timesteps to train")
+    parser.add_argument("--eval-freq", type=int, default=1000, help="Evaluation frequency in stepst")
     args = parser.parse_args()
 
     main(args)
