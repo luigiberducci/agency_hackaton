@@ -125,7 +125,6 @@ class AutoControlWrapper(gymnasium.Wrapper):
 
         # filter out observations of auto-controlled agents
         obs = {k: obs[k] for k in self.contr_agent_ids}
-        reward = reward[:n_agents - self.n_auto_agents]
-        #reward = reward[-1]
+        reward = sum(reward[-len(self.auto_agent_ids):]) * np.ones(len(self.contr_agent_ids))
 
         return obs, reward, done, truncated, info
