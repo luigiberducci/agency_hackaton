@@ -4,6 +4,7 @@ from stable_baselines3.common.callbacks import EvalCallback
 import stable_baselines3
 import numpy as np
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.monitor import Monitor
 
 trainer_fns = {
     "ppo": stable_baselines3.PPO,
@@ -15,13 +16,12 @@ def make_env(env_id: str):
     import envs
     import gymnasium as gym
     from envs.control_wrapper import AutoControlWrapper
-    from envs.control_wrapper import FlattenDiscreteAction
-    from gymnasium.wrappers import FlattenObservation
+    from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 
     env = gym.make(env_id)
-    env = AutoControlWrapper(env)
-    env = FlattenDiscreteAction(env)
-    env = FlattenObservation(env)
+    env = AutoControlWrapper(env, n_auto_agents=1)
+    env = UnwrapSingleAgentDictWrapper(env)
+    env = Monitor(env)
 
     return env
 
