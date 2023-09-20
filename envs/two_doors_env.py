@@ -3,6 +3,7 @@ from __future__ import annotations
 import gymnasium
 
 from envs.base_env import SimpleEnv
+from envs.goal_generators import goal_generator_factory
 from gym_multigrid.multigrid import (
     MultiGridEnv,
     World,
@@ -18,6 +19,13 @@ from gym_multigrid.multigrid import (
 
 
 class TwoDoorsEnv(SimpleEnv):
+    def __init__(self, goal_generator: str = None, **kwargs):
+        if goal_generator is not None:
+            self.goal_generator = goal_generator_factory(goal_generator, **kwargs)
+        else:
+            self.goal_generator = None
+
+        super().__init__(**kwargs)
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
 
@@ -58,6 +66,9 @@ class TwoDoorsEnv(SimpleEnv):
             # goal (for all but the altruistic agent)
             if i == 0:
                 goal_pos = None
+            elif self.goal_generator is not None:
+                goal_pos = self.goal_generator(self, agent_id=f"agent_{i}")
+                self.put_obj(Goal(self.world, i), *goal_pos)
             else:
                 goal_pos = self.place_obj(Goal(self.world, i), max_tries=100)
             self.goals.append(goal_pos)

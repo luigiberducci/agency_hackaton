@@ -6,7 +6,9 @@ import envs  # keep it, otherwise gym.make() won't work on custom envs
 from envs.control_wrapper import AutoControlWrapper
 
 
-env = gym.make("two-doors-v0", render_mode="human")
+env = gym.make("two-doors-v0",
+               goal_generator="choice", goals=[(10, 1), (10, 5)],
+               render_mode="human")
 env = AutoControlWrapper(env)
 
 seed = 42
