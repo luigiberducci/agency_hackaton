@@ -1,4 +1,6 @@
 import datetime
+import pathlib
+import yaml
 
 from stable_baselines3.common.callbacks import EvalCallback
 import stable_baselines3
@@ -57,17 +59,22 @@ def main(args):
     eval_env = make_env(env_id=env_id, rank=0, seed=42)()
     eval_env = Monitor(eval_env)
 
-
-    # setup logdir and evaluation callbacks
+    # setup logdir
     date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     logdir = f"{outdir}/{algo}-{env_id}-{date_str}-{seed}"
-    eval_callback = EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq)
+    pathlib.Path(logdir).mkdir(parents=True, exist_ok=True)
 
+    # copy arg params to logdir
+    with open(f"{logdir}/args.yaml", "w") as f:
+        yaml.dump(vars(args), f)
+
+    # create model trainer
     model = trainer_fn(
         "MlpPolicy", train_env, seed=seed, tensorboard_log=logdir, verbose=1
     )
 
     # train model
+    eval_callback = EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq)
     model.learn(total_timesteps=total_timesteps, callback=eval_callback)
 
     # evaluate trained model
@@ -83,13 +90,29 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env-id", type=str, default="door-2-agents-v0", help="Env ID as registered in Gymnasium")
-    parser.add_argument("--num-envs", type=int, default=2, help="Number of vectorized environments")
+    parser.add_argument(
+        "--env-id",
+        type=str,
+        default="door-2-agents-v0",
+        help="Env ID as registered in Gymnasium",
+    )
+    parser.add_argument(
+        "--num-envs", type=int, default=2, help="Number of vectorized environments"
+    )
     parser.add_argument("--algo", type=str, default="ppo", help="Algorithm to use")
-    parser.add_argument("--outdir", type=str, default="logs/", help="Directory to store logs")
+    parser.add_argument(
+        "--outdir", type=str, default="logs/", help="Directory to store logs"
+    )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
-    parser.add_argument("--total-timesteps", type=int, default=100000, help="Total number of timesteps to train")
-    parser.add_argument("--eval-freq", type=int, default=1000, help="Evaluation frequency in stepst")
+    parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        default=100000,
+        help="Total number of timesteps to train",
+    )
+    parser.add_argument(
+        "--eval-freq", type=int, default=1000, help="Evaluation frequency in stepst"
+    )
     args = parser.parse_args()
 
     main(args)
