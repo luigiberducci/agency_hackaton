@@ -1,5 +1,3 @@
-from time import sleep
-
 import gymnasium as gym
 
 import envs  # keep it, otherwise gym.make() won't work on custom envs
@@ -25,5 +23,4 @@ for i in range(n_episodes):
         actions = env.action_space.sample()
         obs, reward, done, truncated, info = env.step(actions)
         env.render()
-        sleep(0.1)
         print("reward: {}, done: {}".format(reward, done))
