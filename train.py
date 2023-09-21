@@ -1,6 +1,8 @@
 import datetime
 import pathlib
+
 import yaml
+from gymnasium.wrappers import FilterObservation
 
 from stable_baselines3.common.callbacks import EvalCallback
 import stable_baselines3
@@ -14,6 +16,7 @@ import envs
 import gymnasium as gym
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
+from envs.observation_wrapper import RGBImgObsWrapper
 
 trainer_fns = {
     "ppo": stable_baselines3.PPO,
@@ -25,6 +28,8 @@ def make_env(env_id: str, rank: int, seed: int = 42):
     def make() -> gym.Env:
         env = gym.make(env_id)
         env = AutoControlWrapper(env, n_auto_agents=1)
+        env = RGBImgObsWrapper(env)
+        env = FilterObservation(env, filter_keys=["image"])
         env = UnwrapSingleAgentDictWrapper(env)
         env.reset(seed=seed + rank)
         return env
@@ -70,7 +75,7 @@ def main(args):
 
     # create model trainer
     model = trainer_fn(
-        "MlpPolicy", train_env, seed=seed, tensorboard_log=logdir, verbose=1
+        "CnnPolicy", train_env, seed=seed, tensorboard_log=logdir, verbose=1
     )
 
     # train model

@@ -154,18 +154,18 @@ class UnwrapSingleAgentDictWrapper(gymnasium.Wrapper):
         assert len(agent_ids) == 1, "this wrapper is intended for single-agent envs"
 
         original_action_space = self.action_space
-        original_observation_space = self.observation_space
+        original_obs_space = self.observation_space
 
         self.agent_id = agent_ids[0]
         self.action_space = original_action_space.spaces[self.agent_id]
-        self.observation_space = original_observation_space.spaces[self.agent_id]
+        self.observation_space = original_obs_space.spaces["image"]
 
     def reset(self, seed=None, options=None):
         obs, info = super().reset(seed=seed, options=options)
-        return obs[self.agent_id], info
+        return obs["image"], info
 
     def step(self, action):
         action = {self.agent_id: action}
         obs, reward, done, truncated, info = super().step(action)
         reward = float(reward)
-        return obs[self.agent_id], reward, done, truncated, info
+        return obs["image"], reward, done, truncated, info
