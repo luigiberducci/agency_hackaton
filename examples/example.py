@@ -24,4 +24,4 @@ for i in range(n_episodes):
         obs, reward, done, truncated, info = env.step(actions)
         env.render()
         sleep(0.1)
-        #print("reward: {}, done: {}".format(reward, done))
+        # print("reward: {}, done: {}".format(reward, done))

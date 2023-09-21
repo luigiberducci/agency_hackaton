@@ -15,6 +15,7 @@ class TwoDoorsEnv(SimpleEnv):
             self.goal_generator = None
 
         super().__init__(**kwargs)
+
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
 

@@ -7,7 +7,6 @@ from envs.goal_generators import goal_generator_factory
 from gym_multigrid.world_objects import *
 
 
-
 class DoorEnv(SimpleEnv):
     def __init__(self, goal_generator: str = None, **kwargs):
         if goal_generator is not None:
