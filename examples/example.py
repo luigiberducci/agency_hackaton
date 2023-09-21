@@ -4,10 +4,12 @@ import gymnasium as gym
 
 import envs  # keep it, otherwise gym.make() won't work on custom envs
 from envs.control_wrapper import AutoControlWrapper
+from envs.observation_wrapper import RGBImgObsWrapper
 
 
 env = gym.make("door-2-agents-v0", render_mode="human")
 env = AutoControlWrapper(env)
+env = RGBImgObsWrapper(env)
 
 seed = 42
 n_episodes = 3
