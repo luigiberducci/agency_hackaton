@@ -4,18 +4,7 @@ import gymnasium
 
 from envs.base_env import SimpleEnv
 from envs.goal_generators import goal_generator_factory
-from gym_multigrid.multigrid import (
-    MultiGridEnv,
-    World,
-    Agent,
-    Goal,
-    COLOR_NAMES,
-    Key,
-    Door,
-    Wall,
-    Grid,
-    Ball,
-)
+from gym_multigrid.world_objects import Grid, Wall, Door, COLOR_NAMES, Key, Goal
 
 
 class TwoDoorsEnv(SimpleEnv):
