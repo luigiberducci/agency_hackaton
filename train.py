@@ -2,7 +2,7 @@ import datetime
 import pathlib
 
 import yaml
-from gymnasium.wrappers import FilterObservation
+from gymnasium.wrappers import FilterObservation, RecordVideo
 
 from stable_baselines3.common.callbacks import EvalCallback
 import stable_baselines3
@@ -24,9 +24,13 @@ trainer_fns = {
 }
 
 
-def make_env(env_id: str, rank: int, seed: int = 42):
+def make_env(env_id: str, rank: int, seed: int = 42, logdir: str = None):
     def make() -> gym.Env:
-        env = gym.make(env_id)
+        if rank == 0 and logdir is not None:
+            env = gym.make(env_id, render_mode="rgb_array")
+            env = RecordVideo(env, video_folder=f"{logdir}/videos/")
+        else:
+            env = gym.make(env_id)
         env = AutoControlWrapper(env, n_auto_agents=1)
         env = RGBImgObsWrapper(env)
         env = FilterObservation(env, filter_keys=["image"])
@@ -56,14 +60,6 @@ def main(args):
     if seed is None:
         seed = np.random.randint(0, 1e6)
 
-    # create environments and trainer
-    train_env = SubprocVecEnv([make_env(env_id, i) for i in range(num_envs)])
-    trainer_fn = make_trainer(algo)
-
-    # create evaluation environment
-    eval_env = make_env(env_id=env_id, rank=0, seed=42)()
-    eval_env = Monitor(eval_env)
-
     # setup logdir
     date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     logdir = f"{outdir}/{algo}-{env_id}-{date_str}-{seed}"
@@ -72,6 +68,17 @@ def main(args):
     # copy arg params to logdir
     with open(f"{logdir}/args.yaml", "w") as f:
         yaml.dump(vars(args), f)
+
+    # create environments and trainer
+    train_env = make_env(env_id, 0, logdir=logdir)()
+    #SubprocVecEnv(
+    #    [make_env(env_id, i, logdir=logdir) for i in range(num_envs)]
+    #)
+    trainer_fn = make_trainer(algo)
+
+    # create evaluation environment
+    eval_env = make_env(env_id=env_id, rank=0, seed=42)()
+    eval_env = Monitor(eval_env)
 
     # create model trainer
     model = trainer_fn(
