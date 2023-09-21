@@ -11,10 +11,10 @@ class Planner:
     def __init__(self, env):
         self._env = env
         # CEM parameters
-        self.horizon = 3    # planning horizon
-        self.n = 100    # number of samples
-        self.k = 10    # number of top samples to keep
-        self.iterations = 3 # number of iterations
+        self.horizon = 3  # planning horizon
+        self.n = 100  # number of samples
+        self.k = 10  # number of top samples to keep
+        self.iterations = 3  # number of iterations
 
         assert self.k <= self.n and self.n % self.k == 0
 
@@ -29,8 +29,13 @@ class Planner:
         elif self.actions[action] == "right":
             dir = (dir + 1) % 4
         elif self.actions[action] == "forward":
-            next_pos = pos + np.array([self.move_forward_x[dir], self.move_forward_y[dir]])
-            if self._env.grid.get(*next_pos) is None or self._env.grid.get(*next_pos).can_overlap():
+            next_pos = pos + np.array(
+                [self.move_forward_x[dir], self.move_forward_y[dir]]
+            )
+            if (
+                self._env.grid.get(*next_pos) is None
+                or self._env.grid.get(*next_pos).can_overlap()
+            ):
                 pos = next_pos
         else:
             raise ValueError("Invalid action.")
@@ -41,7 +46,6 @@ class Planner:
         Compute the cost of a given position, as manhattan distance to the goal.
         """
         return abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
-
 
     def plan(self, pos, dir, goal):
         """
@@ -66,7 +70,7 @@ class Planner:
                 costs.append(cost)
 
             costs = np.array(costs)
-            topk = np.argsort(costs)[:self.k]
+            topk = np.argsort(costs)[: self.k]
             action_seqs = action_seqs[topk]
 
             # resample
@@ -89,17 +93,20 @@ class AutoControlWrapper(gymnasium.Wrapper):
 
         # get the ids of the agents, separate them into controllable and non-controllable
         agents_ids = self.env.action_space.spaces.keys()
-        self.contr_agent_ids = list(agents_ids)[:len(agents_ids) - n_auto_agents]
-        self.auto_agent_ids = list(agents_ids)[len(agents_ids) - n_auto_agents:]
+        self.contr_agent_ids = list(agents_ids)[: len(agents_ids) - n_auto_agents]
+        self.auto_agent_ids = list(agents_ids)[len(agents_ids) - n_auto_agents :]
 
         # restrict action space to controllable agents
-        original_action_space = self.action_space   # dict
-        self.action_space = gymnasium.spaces.Dict({k: original_action_space[k] for k in self.contr_agent_ids})
+        original_action_space = self.action_space  # dict
+        self.action_space = gymnasium.spaces.Dict(
+            {k: original_action_space[k] for k in self.contr_agent_ids}
+        )
 
         # restrict observation space to controllable agents
-        original_observation_space = self.observation_space   # dict
-        self.observation_space = gymnasium.spaces.Dict({k: original_observation_space[k] for k in self.contr_agent_ids})
-
+        original_observation_space = self.observation_space  # dict
+        self.observation_space = gymnasium.spaces.Dict(
+            {k: original_observation_space[k] for k in self.contr_agent_ids}
+        )
 
     def step(self, actions) -> ActType:
         assert isinstance(actions, dict)
@@ -125,6 +132,40 @@ class AutoControlWrapper(gymnasium.Wrapper):
 
         # filter out observations of auto-controlled agents
         obs = {k: obs[k] for k in self.contr_agent_ids}
-        reward = reward[:n_agents - self.n_auto_agents]
+        reward = sum(reward[-len(self.auto_agent_ids) :]) * np.ones(
+            len(self.contr_agent_ids)
+        )
 
         return obs, reward, done, truncated, info
+
+
+class UnwrapSingleAgentDictWrapper(gymnasium.Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+
+        assert (
+            type(env.action_space) == gymnasium.spaces.Dict
+        ), "this wrapper is intended for Dict action spaces"
+        assert (
+            type(env.observation_space) == gymnasium.spaces.Dict
+        ), "this wrapper is intended for Dict observation spaces"
+
+        agent_ids = list(env.action_space.spaces.keys())
+        assert len(agent_ids) == 1, "this wrapper is intended for single-agent envs"
+
+        original_action_space = self.action_space
+        original_observation_space = self.observation_space
+
+        self.agent_id = agent_ids[0]
+        self.action_space = original_action_space.spaces[self.agent_id]
+        self.observation_space = original_observation_space.spaces[self.agent_id]
+
+    def reset(self, seed=None, options=None):
+        obs, info = super().reset(seed=seed, options=options)
+        return obs[self.agent_id], info
+
+    def step(self, action):
+        action = {self.agent_id: action}
+        obs, reward, done, truncated, info = super().step(action)
+        reward = float(reward)
+        return obs[self.agent_id], reward, done, truncated, info
