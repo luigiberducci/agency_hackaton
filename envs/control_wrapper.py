@@ -11,10 +11,10 @@ class Planner:
     def __init__(self, env):
         self._env = env
         # CEM parameters
-        self.horizon = 3  # planning horizon
-        self.n = 100  # number of samples
+        self.horizon = 1  # planning horizon
+        self.n = 50  # number of samples
         self.k = 10  # number of top samples to keep
-        self.iterations = 3  # number of iterations
+        self.iterations = 2  # number of iterations
 
         assert self.k <= self.n and self.n % self.k == 0
 
