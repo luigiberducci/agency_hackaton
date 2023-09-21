@@ -29,8 +29,8 @@ class RGBImgObsWrapper(gym.core.ObservationWrapper):
             low=0,
             high=255,
             shape=(
-                self.unwrapped.width * tile_size,
                 self.unwrapped.height * tile_size,
+                self.unwrapped.width * tile_size,
                 3,
             ),
             dtype="uint8",
