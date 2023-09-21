@@ -3,19 +3,9 @@ from __future__ import annotations
 import gymnasium
 
 from envs.base_env import SimpleEnv
-from envs.goal_generators import GoalGenerator, goal_generator_factory
-from gym_multigrid.multigrid import (
-    MultiGridEnv,
-    World,
-    Agent,
-    Goal,
-    COLOR_NAMES,
-    Key,
-    Door,
-    Wall,
-    Grid,
-    Ball,
-)
+from envs.goal_generators import goal_generator_factory
+from gym_multigrid.world_objects import *
+
 
 
 class DoorEnv(SimpleEnv):

@@ -1,1 +1,7 @@
 matplotlib
+stable-baselines3
+tensorboard
+pyyaml
+numpy
+gymnasium
+./gym-multigrid
