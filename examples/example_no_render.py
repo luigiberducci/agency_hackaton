@@ -10,7 +10,7 @@ env = gym.make("door-2-agents-v0")
 env = AutoControlWrapper(env)
 
 seed = 42
-n_episodes = 10
+n_episodes = 3
 
 for i in range(n_episodes):
     env.reset(seed=seed + i)
