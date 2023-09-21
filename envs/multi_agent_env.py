@@ -2,18 +2,9 @@ from __future__ import annotations
 
 import gymnasium
 
-from gym_multigrid.multigrid import (
-    MultiGridEnv,
-    World,
-    Agent,
-    Goal,
-    COLOR_NAMES,
-    Key,
-    Door,
-    Wall,
-    Grid,
-    Ball,
-)
+from gym_multigrid.multigrid import MultiGridEnv, World
+from gym_multigrid.world_objects import *
+
 
 
 class SimpleEnv(MultiGridEnv):
