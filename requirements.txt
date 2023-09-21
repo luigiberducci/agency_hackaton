@@ -4,4 +4,5 @@ tensorboard
 pyyaml
 numpy
 gymnasium
+pygame
 ./gym-multigrid
