@@ -163,14 +163,14 @@ class UnwrapSingleAgentDictWrapper(gymnasium.Wrapper):
 
         self.agent_id = agent_ids[0]
         self.action_space = original_action_space.spaces[self.agent_id]
-        self.observation_space = original_obs_space.spaces["image"]
+        self.observation_space = original_obs_space.spaces[self.agent_id]["image"]
 
     def reset(self, seed=None, options=None):
         obs, info = super().reset(seed=seed, options=options)
-        return obs["image"], info
+        return obs[self.agent_id]["image"], info
 
     def step(self, action):
         action = {self.agent_id: action}
         obs, reward, done, truncated, info = super().step(action)
         reward = float(reward)
-        return obs["image"], reward, done, truncated, info
+        return obs[self.agent_id]["image"], reward, done, truncated, info

@@ -48,8 +48,9 @@ class SimpleEnv(MultiGridEnv):
         )
 
         original_observation_space = self.observation_space
+        original_obs_as_dict = gymnasium.spaces.Dict({"grid": original_observation_space})
         self.observation_space = gymnasium.spaces.Dict(
-            {f"agent_{i}": original_observation_space for i in range(num_agents)}
+            {f"agent_{i}": original_obs_as_dict for i in range(num_agents)}
         )
 
         if render_fps is not None:
@@ -63,7 +64,7 @@ class SimpleEnv(MultiGridEnv):
         obs, reward, done, truncated, info = super().step(actions)
 
         # convert from list to dict
-        obs = {f"agent_{i}": obs[i] for i in range(self.num_agents)}
+        obs = {f"agent_{i}": {"grid": obs[i]} for i in range(self.num_agents)}
 
         return obs, reward, done, truncated, info
 
@@ -71,7 +72,7 @@ class SimpleEnv(MultiGridEnv):
         obs, info = super().reset(seed=seed, options=options)
 
         # convert from list to dict
-        obs = {f"agent_{i}": obs[i] for i in range(self.num_agents)}
+        obs = {f"agent_{i}": {"grid": obs[i]} for i in range(self.num_agents)}
 
         return obs, info
 
