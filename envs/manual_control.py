@@ -68,6 +68,10 @@ class ManualControl:
         }
         if key in key_to_action.keys():
             action = key_to_action[key]
-            self.step(action)
+            try:
+                self.step(action)
+            except Exception as e:
+                import warnings
+                warnings.warn(f"Exception: {e}")
         else:
             print(key)
