@@ -33,9 +33,17 @@ class TwoDoorsEnv(SimpleEnv):
             self.grid.set(12, i, Wall(self.world))
 
         # Place the two doors and key
-        self.grid.set(6, 1, Door(self.world, COLOR_NAMES[0], is_locked=True))
-        self.grid.set(6, 5, Door(self.world, COLOR_NAMES[0], is_locked=True))
-        self.grid.set(13, 1, Key(self.world, COLOR_NAMES[0]))
+        door1 = Door(self.world, COLOR_NAMES[0], is_locked=True, is_open=False)
+        door1.init_pos = door1.cur_pos = (6, 1)
+        self.grid.set(*door1.cur_pos, door1)
+
+        door2 = Door(self.world, COLOR_NAMES[0], is_locked=True, is_open=False)
+        door2.init_pos = door2.cur_pos = (6, 5)
+        self.grid.set(*door2.cur_pos, door2)
+
+        key = Key(self.world, COLOR_NAMES[0])
+        key.init_pos = key.cur_pos = (13, 1)
+        self.grid.set(*key.cur_pos, key)
 
         self.goals = []
 
@@ -57,8 +65,9 @@ class TwoDoorsEnv(SimpleEnv):
             if i == 0:
                 goal_pos = None
             elif self.goal_generator is not None:
+                goal = Goal(self.world, i)
                 goal_pos = self.goal_generator(self, agent_id=f"agent_{i}")
-                self.put_obj(Goal(self.world, i), *goal_pos)
+                self.put_obj(goal, *goal_pos)
             else:
                 goal_pos = self.place_obj(Goal(self.world, i), max_tries=100)
             self.goals.append(goal_pos)
