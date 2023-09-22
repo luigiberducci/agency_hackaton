@@ -45,6 +45,7 @@ class SimpleEnv(MultiGridEnv):
 
         # precompute choices matrices for open doors
         self.choices_grid = self._precompute_choices_grid()
+        self.choices_grid = self.choices_grid / np.max(self.choices_grid)   # normalize
 
         original_action_space = self.action_space
         self.action_space = gymnasium.spaces.Dict(
@@ -146,8 +147,8 @@ class SimpleEnv(MultiGridEnv):
         # compute choice as in "Learning Altruistic Behaviors"
         choices = np.zeros(self.num_agents, dtype=np.int32)
         for i, agent in enumerate(self.agents):
-            door = [obj for obj in self.grid.grid if obj is not None and obj.type == "door"][0]
-            is_open = door.is_open
+            doors = [obj for obj in self.grid.grid if obj is not None and obj.type == "door"]
+            is_open = doors[0].is_open if len(doors) > 0 else True
             x, y, dir, carrying = agent.pos[0], agent.pos[1], agent.dir, agent.carrying
             choices[i] = self.choices_grid[x, y, dir, int(carrying is None), int(is_open)]
 

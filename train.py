@@ -148,11 +148,11 @@ def main(args):
 
     # create training environment
     train_env = SubprocVecEnv(
-        [make_env(env_id, i, log_dir=logdir, reward_fn=AltruisticRewardFn) for i in range(n_envs)]
+        [make_env(env_id, i, log_dir=logdir, reward_fn=AltruisticRewardFn()) for i in range(n_envs)]
     )
 
     # create evaluation environment
-    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=SparseRewardFn)()
+    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=SparseRewardFn())()
     eval_env = Monitor(eval_env, logdir)
 
     # create model trainer
