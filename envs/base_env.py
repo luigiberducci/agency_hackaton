@@ -17,6 +17,7 @@ class SimpleEnv(MultiGridEnv):
         view_size: int = 7,
         max_steps: int = 1000,
         render_mode: str = None,
+        render_fps: int = None,
         **kwargs,
     ):
         self.num_agents = num_agents
@@ -51,7 +52,9 @@ class SimpleEnv(MultiGridEnv):
             {f"agent_{i}": original_observation_space for i in range(num_agents)}
         )
 
-        self.render_mode = render_mode
+        if render_fps is not None:
+            self.metadata["render_fps"] = render_fps
+
 
     def step(self, actions):
         # convert from dict to list

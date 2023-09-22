@@ -11,6 +11,7 @@ env = gym.make(
     goal_generator="choice",
     goals=[(10, 1), (10, 5)],
     render_mode="human",
+    render_fps=250
 )
 env = AutoControlWrapper(env)
 
