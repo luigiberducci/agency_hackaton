@@ -11,10 +11,10 @@ class Planner:
     def __init__(self, env):
         self._env = env
         # CEM parameters
-        self.horizon = 1  # planning horizon
-        self.n = 50  # number of samples
+        self.horizon = 3  # planning horizon
+        self.n = 100  # number of samples
         self.k = 10  # number of top samples to keep
-        self.iterations = 2  # number of iterations
+        self.iterations = 3  # number of iterations
 
         assert self.k <= self.n and self.n % self.k == 0
 
@@ -45,7 +45,22 @@ class Planner:
         """
         Compute the cost of a given position, as manhattan distance to the goal.
         """
-        return abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+        distance = abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+        # count how many walls are in the way
+        for i in range(1, distance):
+            if pos[0] + i * self.move_forward_x[dir] < 0 or pos[1] + i * self.move_forward_y[
+                dir] < 0:
+                break
+            if pos[0] + i * self.move_forward_x[dir] >= self._env.grid.width or pos[1] + i * self.move_forward_y[dir] >= self._env.grid.height:
+                break
+
+            fwd_cell = self._env.grid.get(
+                pos[0] + i * self.move_forward_x[dir],
+                pos[1] + i * self.move_forward_y[dir],
+            )
+            if fwd_cell is not None and fwd_cell.can_overlap() == False:
+                distance += 10.0
+        return distance
 
     def plan(self, pos, dir, goal):
         """
