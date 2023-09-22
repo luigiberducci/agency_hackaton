@@ -6,7 +6,7 @@ from envs.observation_wrapper import RGBImgObsWrapper
 
 
 
-env = gym.make("door-2-agents-v0")
+env = gym.make("one-door-2-agents-v0")
 env = AutoControlWrapper(env)
 env = RGBImgObsWrapper(env)
 
