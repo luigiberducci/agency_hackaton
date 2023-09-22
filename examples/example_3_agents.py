@@ -7,7 +7,7 @@ from envs.control_wrapper import AutoControlWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
 
 
-env = gym.make("door-3-agents-v0", render_mode="human")
+env = gym.make("one-door-3-agents-v0", render_mode="human", render_fps=250)
 env = AutoControlWrapper(env)
 env = RGBImgObsWrapper(env)
 
