@@ -157,8 +157,7 @@ def main(args):
 
     # create evaluation environment
     eval_reward = reward_fn_factory(reward=reward_id)
-    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=eval_reward)
-    #eval_env = Monitor(eval_env, logdir)
+    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=eval_reward)()
 
     # create model trainer
     model = trainer_fn(
