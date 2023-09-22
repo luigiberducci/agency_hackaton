@@ -26,20 +26,21 @@ class DoorEnv(SimpleEnv):
         self.grid.vert_wall(self.world, width - 1, 0)
 
         # Generate vertical separation wall
-        self.grid.vert_wall(self.world, 6, 0)
+        wall_w = int(self.width * 1/3)
+        self.grid.vert_wall(self.world, wall_w, 0)
 
         # Generate second vertical separation wall (almost complete)
         for i in range(0, height - 2):
-            self.grid.set(12, i, Wall(self.world))
+            self.grid.set(self.width - 3, i, Wall(self.world))
 
         # Place the door and key
         door = Door(self.world, COLOR_NAMES[0], is_locked=True, is_open=False)
-        door.init_pos = door.cur_pos = (6, 4)
-        self.grid.set(6, 4, door)
+        door.init_pos = door.cur_pos = wall_w, self.height - 2
+        self.grid.set(*door.init_pos, door)
 
         key = Key(self.world, COLOR_NAMES[0])
-        key.init_pos = key.cur_pos = (13, 1)
-        self.grid.set(13, 1, key)
+        key.init_pos = key.cur_pos = (self.width - 2, 1)
+        self.grid.set(*key.init_pos, key)
 
         self.goals = []
 
@@ -49,11 +50,11 @@ class DoorEnv(SimpleEnv):
             top = size = None
             if i == 0:
                 # the first agent (altruistic) must be on the right side of the wall
-                top = (7, 1)
-                size = (7, 5)
+                top = (wall_w + 1, 1)
+                size = (wall_w + 1, 5)
             else:
                 top = (1, 1)
-                size = (5, 5)
+                size = (wall_w - 1, 5)
 
             self.place_agent(self.agents[i], top=top, size=size, max_tries=100)
 
