@@ -10,11 +10,12 @@ class Planner:
 
     def __init__(self, env):
         self._env = env
+        self._doors_pos = [cell.cur_pos for cell in self._env.grid.grid if cell and cell.type == "door"]
         # CEM parameters
-        self.horizon = 3  # planning horizon
-        self.n = 100  # number of samples
+        self.horizon = 2  # planning horizon
+        self.n = 30  # number of samples
         self.k = 10  # number of top samples to keep
-        self.iterations = 3  # number of iterations
+        self.iterations = 2  # number of iterations
 
         assert self.k <= self.n and self.n % self.k == 0
 
@@ -46,27 +47,15 @@ class Planner:
         Compute the cost of a given position, as manhattan distance to the goal.
         """
         distance = abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
-        # count how many walls are in the way
-        for i in range(1, distance):
-            if pos[0] + i * self.move_forward_x[dir] < 0 or pos[1] + i * self.move_forward_y[
-                dir] < 0:
-                break
-            if pos[0] + i * self.move_forward_x[dir] >= self._env.grid.width or pos[1] + i * self.move_forward_y[dir] >= self._env.grid.height:
-                break
-
-            fwd_cell = self._env.grid.get(
-                pos[0] + i * self.move_forward_x[dir],
-                pos[1] + i * self.move_forward_y[dir],
-            )
-            if fwd_cell is not None and fwd_cell.can_overlap() == False:
-                distance += 10.0
-        return distance
+        door_bonus = 0.5 * sum([abs(pos[0] - door[0]) + abs(pos[1] - door[1]) for door in self._doors_pos]) / len(self._doors_pos)
+        return distance + door_bonus
 
     def plan(self, pos, dir, goal):
         """
         Planning step with CEM algorithm.
         """
         action_seqs = np.random.random_integers(0, 3, size=(self.n, self.horizon))
+        best_action_seq = action_seqs[0]
         for i in range(self.iterations):
             # add noise
             noise = np.random.random_integers(-1, 1, size=(self.n, self.horizon))
@@ -87,11 +76,12 @@ class Planner:
             costs = np.array(costs)
             topk = np.argsort(costs)[: self.k]
             action_seqs = action_seqs[topk]
+            best_action_seq = action_seqs[0]
 
             # resample
             action_seqs = np.repeat(action_seqs, self.n // self.k, axis=0)
 
-        return int(action_seqs[0][0])
+        return int(best_action_seq[0])
 
 
 class AutoControlWrapper(gymnasium.Wrapper):
