@@ -16,6 +16,7 @@ import gymnasium as gym
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
+from envs.reward_wrappers import SparseRewardFn, RewardWrapper
 from models import MinigridFeaturesExtractor
 
 trainer_fns = {
@@ -30,7 +31,7 @@ configs = {
         },
         "trainer_params": {
             "policy": "CnnPolicy",
-            "n_steps": 2048,
+            "n_steps": 512,
             "batch_size": 64,
             "gae_lambda": 0.95,
             "gamma": 0.99,
@@ -79,6 +80,7 @@ def make_env(env_id: str, rank: int, seed: int = 42, log_dir: str = None):
                 goals=goals_beyond_door,
                 render_fps=1000,
             )
+        env = RewardWrapper(env, reward_fn=SparseRewardFn())
         env = AutoControlWrapper(env, n_auto_agents=1)
         env = RGBImgObsWrapper(env)
         env = UnwrapSingleAgentDictWrapper(env)
