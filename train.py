@@ -69,7 +69,6 @@ def make_env(env_id: str, rank: int, seed: int = 42, log_dir: str = None):
                 render_mode="rgb_array",
                 goal_generator=goal_generator,
                 goals=goals_beyond_door,
-                render_fps=1000,
             )
             env = RecordVideo(env, video_folder=f"{log_dir}/videos")
         else:
@@ -78,7 +77,6 @@ def make_env(env_id: str, rank: int, seed: int = 42, log_dir: str = None):
                 render_mode="rgb_array",
                 goal_generator=goal_generator,
                 goals=goals_beyond_door,
-                render_fps=1000,
             )
         env = RewardWrapper(env, reward_fn=SparseRewardFn())
         env = AutoControlWrapper(env, n_auto_agents=1)
