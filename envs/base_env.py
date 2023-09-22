@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 
 import gymnasium
+import numpy as np
 
 from gym_multigrid.multigrid import MultiGridEnv, World
 from gym_multigrid.world_objects import Agent
@@ -48,7 +49,12 @@ class SimpleEnv(MultiGridEnv):
         )
 
         original_observation_space = self.observation_space
-        original_obs_as_dict = gymnasium.spaces.Dict({"grid": original_observation_space})
+        original_obs_as_dict = gymnasium.spaces.Dict(
+            {
+                "grid": original_observation_space,
+                "choice": gymnasium.spaces.Box(low=0, high=100, shape=(1,), dtype=int),
+            }
+        )
         self.observation_space = gymnasium.spaces.Dict(
             {f"agent_{i}": original_obs_as_dict for i in range(num_agents)}
         )
@@ -56,23 +62,34 @@ class SimpleEnv(MultiGridEnv):
         if render_fps is not None:
             self.metadata["render_fps"] = render_fps
 
-
     def step(self, actions):
         # convert from dict to list
         actions = [actions[f"agent_{i}"] for i in range(self.num_agents)]
 
         obs, reward, done, truncated, info = super().step(actions)
 
+        # compute choice as in "Learning Altruistic Behaviors"
+        choices = np.zeros(self.num_agents)
+
         # convert from list to dict
-        obs = {f"agent_{i}": {"grid": obs[i]} for i in range(self.num_agents)}
+        obs = {
+            f"agent_{i}": {"grid": obs[i], "choice": choices[i]}
+            for i in range(self.num_agents)
+        }
 
         return obs, reward, done, truncated, info
 
     def reset(self, seed=None, options=None):
         obs, info = super().reset(seed=seed, options=options)
 
+        # compute choice as in "Learning Altruistic Behaviors"
+        choices = np.zeros(self.num_agents)
+
         # convert from list to dict
-        obs = {f"agent_{i}": {"grid": obs[i]} for i in range(self.num_agents)}
+        obs = {
+            f"agent_{i}": {"grid": obs[i], "choice": choices[i]}
+            for i in range(self.num_agents)
+        }
 
         return obs, info
 
