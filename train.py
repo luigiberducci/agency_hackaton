@@ -25,12 +25,18 @@ trainer_fns = {
 
 
 def make_env(env_id: str, rank: int, seed: int = 42, log_dir: str = None):
+    goal_generator = "choice"
+    goals_beyond_door = [
+        (8, 2), (9, 2), (10, 2),
+        (8, 3), (9, 3), (10, 3),
+        (8, 4), (9, 4), (10, 4),
+    ]  # choice of goals
     def make() -> gym.Env:
         if rank == 0 and log_dir is not None:
-            env = gym.make(env_id, render_mode="rgb_array")
+            env = gym.make(env_id, render_mode="rgb_array", goal_generator=goal_generator, goals=goals_beyond_door)
             env = RecordVideo(env, video_folder=f"{log_dir}/videos")
         else:
-            env = gym.make(env_id, render_mode="rgb_array")
+            env = gym.make(env_id, render_mode="rgb_array", goal_generator=goal_generator, goals=goals_beyond_door)
         env = AutoControlWrapper(env, n_auto_agents=1)
         env = RGBImgObsWrapper(env)
         env = FilterObservation(env, filter_keys=["image"])
@@ -84,7 +90,8 @@ def main(args):
             json.dump(vars(args), f)
 
     # create environments and trainer
-    train_env = SubprocVecEnv([make_env(env_id, i, log_dir=logdir) for i in range(num_envs)])
+    train_env = make_env(env_id, 0, log_dir=logdir)()
+        #SubprocVecEnv([make_env(env_id, i, log_dir=logdir) for i in range(num_envs)])
     trainer_fn = make_trainer(algo)
 
     # create evaluation environment
@@ -130,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--env-id",
         type=str,
-        default="door-2-agents-v0",
+        default="one-door-2-agents-v0",
         help="Env ID as registered in Gymnasium",
     )
     parser.add_argument(
