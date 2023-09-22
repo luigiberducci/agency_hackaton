@@ -91,5 +91,14 @@ class NegativeRewardFn(RewardFn):
 
         return rewards
 
+def reward_fn_factory(reward: str) -> RewardFn:
+    if reward == "sparse":
+        return SparseRewardFn()
+    elif reward == "altruistic":
+        return AltruisticRewardFn()
+    elif reward == "neg_distance":
+        return NegativeRewardFn()
+    else:
+        raise NotImplementedError(f"Reward function {reward} not implemented")
 
 

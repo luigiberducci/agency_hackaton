@@ -17,7 +17,7 @@ import gymnasium as gym
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
-from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn, NegativeRewardFn
+from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn, NegativeRewardFn, reward_fn_factory
 from models import MinigridFeaturesExtractor
 
 trainer_fns = {
@@ -103,6 +103,7 @@ def make_trainer(algo: str):
 
 def main(args):
     env_id = args.env_id
+    reward_id = args.reward
     total_timesteps = args.total_timesteps
     n_envs = args.num_envs
     algo = args.algo
@@ -129,7 +130,7 @@ def main(args):
     else:
         # setup logdir
         date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        logdir = f"logs/{algo}-{env_id}-{date_str}-{seed}"
+        logdir = f"logs/{algo}-{env_id}/{reward_id}-{date_str}-{seed}"
         modeldir = f"{logdir}/models"
         pathlib.Path(logdir).mkdir(parents=True, exist_ok=True)
 
@@ -151,10 +152,12 @@ def main(args):
     )
 
     # create training environment
-    train_env = DummyVecEnv([make_env(env_id, i, seed=seed, log_dir=logdir, reward_fn=NegativeRewardFn()) for i in range(n_envs)])
+    train_reward = reward_fn_factory(reward=reward_id)
+    train_env = DummyVecEnv([make_env(env_id, i, seed=seed, log_dir=logdir, reward_fn=train_reward) for i in range(n_envs)])
 
     # create evaluation environment
-    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=SparseRewardFn())()
+    eval_reward = reward_fn_factory(reward=reward_id)
+    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=eval_reward)
     #eval_env = Monitor(eval_env, logdir)
 
     # create model trainer
@@ -210,6 +213,7 @@ if __name__ == "__main__":
         default="one-door-2-agents-v0",
         help="Env ID as registered in Gymnasium",
     )
+    parser.add_argument("--reward", type=str, default="sparse", help="Reward function")
     parser.add_argument(
         "--num-envs", type=int, default=None, help="Number of vectorized environments"
     )
