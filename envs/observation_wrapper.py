@@ -20,7 +20,7 @@ class RGBImgObsWrapper(gym.core.ObservationWrapper):
         ![RGBImgObsWrapper](../figures/lavacrossing_RGBImgObsWrapper.png)
     """
 
-    def __init__(self, env, tile_size=1):
+    def __init__(self, env, tile_size=8):
         super().__init__(env)
 
         self.tile_size = tile_size

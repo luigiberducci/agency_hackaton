@@ -2,21 +2,22 @@ import datetime
 import json
 import pathlib
 
-from gymnasium.wrappers import RecordVideo
+from gymnasium.wrappers import RecordVideo, TimeLimit
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 import stable_baselines3
 import numpy as np
+from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv
 
 import envs
 import gymnasium as gym
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
-from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn
+from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn, NegativeRewardFn
 from models import MinigridFeaturesExtractor
 
 trainer_fns = {
@@ -78,6 +79,7 @@ def make_env(env_id: str, rank: int, reward_fn: None, seed: int = 42, log_dir: s
                 goal_generator=goal_generator,
                 goals=goals_beyond_door,
             )
+        env = TimeLimit(env, max_episode_steps=100)
 
         if reward_fn is not None:
             env = RewardWrapper(env, reward_fn=reward_fn)
@@ -85,7 +87,9 @@ def make_env(env_id: str, rank: int, reward_fn: None, seed: int = 42, log_dir: s
         env = AutoControlWrapper(env, n_auto_agents=1)
         env = RGBImgObsWrapper(env)
         env = UnwrapSingleAgentDictWrapper(env)
+        env = Monitor(env)  # keep it here otherwise issue with vec env termination
         env.reset(seed=seed + rank)
+        #check_env(env)
         return env
 
     set_random_seed(seed)
@@ -147,13 +151,11 @@ def main(args):
     )
 
     # create training environment
-    train_env = SubprocVecEnv(
-        [make_env(env_id, i, log_dir=logdir, reward_fn=AltruisticRewardFn()) for i in range(n_envs)]
-    )
+    train_env = DummyVecEnv([make_env(env_id, i, seed=seed, log_dir=logdir, reward_fn=NegativeRewardFn()) for i in range(n_envs)])
 
     # create evaluation environment
     eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=SparseRewardFn())()
-    eval_env = Monitor(eval_env, logdir)
+    #eval_env = Monitor(eval_env, logdir)
 
     # create model trainer
     model = trainer_fn(

@@ -45,7 +45,7 @@ class SimpleEnv(MultiGridEnv):
 
         # precompute choices matrices for open doors
         self.choices_grid = self._precompute_choices_grid()
-        self.choices_grid = self.choices_grid / np.max(self.choices_grid)   # normalize
+        self.choices_grid = self.choices_grid / np.max(self.choices_grid)  # normalize
 
         original_action_space = self.action_space
         self.action_space = gymnasium.spaces.Dict(
@@ -147,10 +147,14 @@ class SimpleEnv(MultiGridEnv):
         # compute choice as in "Learning Altruistic Behaviors"
         choices = np.zeros(self.num_agents, dtype=np.int32)
         for i, agent in enumerate(self.agents):
-            doors = [obj for obj in self.grid.grid if obj is not None and obj.type == "door"]
+            doors = [
+                obj for obj in self.grid.grid if obj is not None and obj.type == "door"
+            ]
             is_open = doors[0].is_open if len(doors) > 0 else True
             x, y, dir, carrying = agent.pos[0], agent.pos[1], agent.dir, agent.carrying
-            choices[i] = self.choices_grid[x, y, dir, int(carrying is None), int(is_open)]
+            choices[i] = self.choices_grid[
+                x, y, dir, int(carrying is None), int(is_open)
+            ]
 
         # then only things to consider is if any other agent is in front, then we should put choices -1
         for i, agent in enumerate(self.agents):
@@ -160,13 +164,20 @@ class SimpleEnv(MultiGridEnv):
 
         # convert from list to dict
         obs = {
-            f"agent_{i}": {"grid": obs[i], "choice": choices[i]}
+            f"agent_{i}": {"grid": obs[i], "choice": choices[i][None]}
             for i in range(self.num_agents)
         }
 
         # expand info, setting success if the agent has reached the goal (reward > 0)
         info.update(
-            {f"agent_{i}": {"success": reward[i] > 0} for i in range(self.num_agents)}
+            {
+                f"agent_{i}": {
+                    "success": reward[i] > 0,
+                    "goal": self.goals[i],
+                    "pos": self.agents[i].pos,
+                }
+                for i in range(self.num_agents)
+            }
         )
 
         return obs, reward, done, truncated, info
@@ -184,7 +195,16 @@ class SimpleEnv(MultiGridEnv):
         }
 
         # initialize info with success to False
-        info.update({f"agent_{i}": {"success": False} for i in range(self.num_agents)})
+        info.update(
+            {
+                f"agent_{i}": {
+                    "success": False,
+                    "goal": self.goals[i],
+                    "pos": self.agents[i].pos,
+                }
+                for i in range(self.num_agents)
+            }
+        )
 
         return obs, info
 

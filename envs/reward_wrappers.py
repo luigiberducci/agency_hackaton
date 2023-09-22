@@ -68,4 +68,28 @@ class AltruisticRewardFn(RewardFn):
         return rewards
 
 
+class NegativeRewardFn(RewardFn):
+
+    def __call__(self, obs, action, done, info=None, next_obs=None) -> float | list[float]:
+        obs = next_obs if next_obs is not None else obs  # if given next obs, compute reward on it
+
+        assert isinstance(obs, dict) and isinstance(info, dict), "NegativeDistanceReward requires dict obs and info"
+        assert all(["pos" in info[agent_id] for agent_id in obs]), "NegativeDistanceReward requires 'pos' in info"
+        assert all(["goal" in info[agent_id] for agent_id in obs]), "NegativeDistanceReward requires 'goal' in info"
+
+        scale = 0.1
+
+        # for each agent, returns the reward as sum of choices of others
+        rewards = []
+        for agent_id in obs:
+            if info[agent_id]["goal"] is None:
+                reward = 0
+            else:
+                manhattan_dist = sum(abs(info[agent_id]["pos"] - info[agent_id]["goal"]))
+                reward = -manhattan_dist
+            rewards.append(reward * scale)
+
+        return rewards
+
+
 
