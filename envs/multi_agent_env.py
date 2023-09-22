@@ -68,7 +68,7 @@ class SimpleEnv(MultiGridEnv):
             self.grid.set(12, i, Wall(self.world))
 
         # Place the door and key
-        door = Door(self.world, COLOR_NAMES[0], is_locked=False, is_open=True)
+        door = Door(self.world, COLOR_NAMES[0], is_locked=True, is_open=False)
         door.cur_pos = door.init_pos = (6, 4)
         self.grid.set(*door.init_pos, door)
 
