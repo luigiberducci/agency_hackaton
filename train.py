@@ -4,7 +4,7 @@ import pathlib
 
 from gymnasium.wrappers import FilterObservation, RecordVideo
 
-from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 import stable_baselines3
 import numpy as np
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -64,7 +64,7 @@ def main(args):
     if track:
         import wandb
 
-        logdir = None
+        logdir = modeldir = None
         run = wandb.init(
             project="agency_hackathon",
             config=vars(args),
@@ -76,6 +76,7 @@ def main(args):
         # setup logdir
         date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         logdir = f"logs/{algo}-{env_id}-{date_str}-{seed}"
+        modeldir = f"{logdir}/models"
         pathlib.Path(logdir).mkdir(parents=True, exist_ok=True)
 
         # copy arg params to logdir
@@ -91,10 +92,14 @@ def main(args):
     eval_env = Monitor(eval_env, logdir)
 
     # create model trainer
-    model = trainer_fn("CnnPolicy", train_env, seed=seed, verbose=1)
+    model = trainer_fn("CnnPolicy", train_env, tensorboard_log=logdir, seed=seed, verbose=1)
 
     # train model
-    callbacks = [EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq, n_eval_episodes=n_eval_episodes)]
+    callbacks = [
+        EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq, n_eval_episodes=n_eval_episodes,
+                     best_model_save_path=logdir),
+        CheckpointCallback(save_freq=eval_freq, save_path=modeldir)
+    ]
     if track:
         from wandb.integration.sb3 import WandbCallback
 
