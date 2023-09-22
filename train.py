@@ -16,7 +16,7 @@ import gymnasium as gym
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
-from envs.reward_wrappers import SparseRewardFn, RewardWrapper
+from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn
 from models import MinigridFeaturesExtractor
 
 trainer_fns = {
@@ -48,7 +48,7 @@ configs = {
 }
 
 
-def make_env(env_id: str, rank: int, seed: int = 42, log_dir: str = None):
+def make_env(env_id: str, rank: int, reward_fn: None, seed: int = 42, log_dir: str = None):
     goal_generator = "choice"
     goals_beyond_door = [
         (5, 1),
@@ -78,7 +78,10 @@ def make_env(env_id: str, rank: int, seed: int = 42, log_dir: str = None):
                 goal_generator=goal_generator,
                 goals=goals_beyond_door,
             )
-        env = RewardWrapper(env, reward_fn=SparseRewardFn())
+
+        if reward_fn is not None:
+            env = RewardWrapper(env, reward_fn=reward_fn)
+
         env = AutoControlWrapper(env, n_auto_agents=1)
         env = RGBImgObsWrapper(env)
         env = UnwrapSingleAgentDictWrapper(env)
@@ -145,11 +148,11 @@ def main(args):
 
     # create training environment
     train_env = SubprocVecEnv(
-        [make_env(env_id, i, log_dir=logdir) for i in range(n_envs)]
+        [make_env(env_id, i, log_dir=logdir, reward_fn=AltruisticRewardFn) for i in range(n_envs)]
     )
 
     # create evaluation environment
-    eval_env = make_env(env_id=env_id, rank=0, seed=42)()
+    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=SparseRewardFn)()
     eval_env = Monitor(eval_env, logdir)
 
     # create model trainer

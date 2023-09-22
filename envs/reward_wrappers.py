@@ -33,12 +33,15 @@ class RewardWrapper(gymnasium.Wrapper):
     def step(self, action):
         obs, reward, done, truncated, info = self.env.step(action)
         reward = self.reward_fn(self.last_obs, action, done, info, obs)
+        self.last_obs = obs
         return obs, reward, done, truncated, info
 
 
 class SparseRewardFn(RewardFn):
 
     def __call__(self, obs, action, done, info=None, next_obs=None) -> float | list[float]:
+        obs = next_obs if next_obs is not None else obs # if given next obs, compute reward on it
+
         assert isinstance(obs, dict), "SparseRewardFn requires dict obs"
         assert all(["grid" in obs[agent_id] for agent_id in obs]), "SparseRewardFn requires 'grid' in obs"
 
@@ -50,6 +53,8 @@ class SparseRewardFn(RewardFn):
 class AltruisticRewardFn(RewardFn):
 
     def __call__(self, obs, action, done, info=None, next_obs=None) -> float | list[float]:
+        obs = next_obs if next_obs is not None else obs  # if given next obs, compute reward on it
+
         assert isinstance(obs, dict) and len(obs) >= 2, "AltruisticRewardFn requires at least two agents in dict obs"
         assert all(["choice" in obs[agent_id] for agent_id in obs]), "AltruisticRewardFn requires 'choice' in obs"
 
