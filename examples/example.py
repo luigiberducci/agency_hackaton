@@ -10,7 +10,7 @@ from envs.observation_wrapper import RGBImgObsWrapper
 
 env = gym.make("one-door-2-agents-v0", render_mode="human", render_fps=250)
 env = AutoControlWrapper(env)
-env = RGBImgObsWrapper(env, hide_obj_types=['goal'])
+env = RGBImgObsWrapper(env, hide_obj_types=["goal"])
 #env = UnwrapSingleAgentDictWrapper(env)
 #env = ManualControl(env)
 #env.start()

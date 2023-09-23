@@ -55,6 +55,7 @@ def make_env(
     env_id: str,
     rank: int,
     reward_fn: Callable[[Env], RewardFn] | None = None,
+    obj_to_hide: list[str] | None = None,
     seed: int = 42,
 ):
     def make() -> gym.Env:
@@ -69,7 +70,7 @@ def make_env(
         env = AutoControlWrapper(env, n_auto_agents=1)
 
         # observation wrapper
-        env = RGBImgObsWrapper(env, hide_obj_types=["goal"])
+        env = RGBImgObsWrapper(env, hide_obj_types=obj_to_hide)
         env = UnwrapSingleAgentDictWrapper(env)
 
         # monitor, to consistently record episode stats
@@ -90,6 +91,7 @@ def make_trainer(algo: str):
 def main(args):
     env_id = args.env_id
     reward_id = args.reward
+    obj_to_hide = args.obj_to_hide
     total_timesteps = args.total_timesteps
     n_envs = args.num_envs
     algo = args.algo
@@ -107,7 +109,9 @@ def main(args):
     if not debug:
         dirs["logdir"] = args.log_dir
         date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        dirs["logdir"] = f"{dirs['logdir']}/{algo}-{env_id}-{reward_id}-{date_str}-{seed}"
+        dirs[
+            "logdir"
+        ] = f"{dirs['logdir']}/{algo}-{env_id}-{reward_id}-{date_str}-{seed}"
 
         for dir, name in zip(dirs, ["log", "models", "videos"]):
             if dirs[dir] is None:
@@ -137,12 +141,19 @@ def main(args):
         SubprocVecEnv if n_envs > 1 else DummyVecEnv
     )  # subproc introduces overhead, not worth it for 1 env
     train_env = vec_cls(
-        [make_env(env_id, i, seed=seed, reward_fn=train_reward) for i in range(n_envs)]
+        [
+            make_env(
+                env_id, i, seed=seed, reward_fn=train_reward, obj_to_hide=obj_to_hide
+            )
+            for i in range(n_envs)
+        ]
     )
 
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
-    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=eval_reward)()
+    eval_env = make_env(
+        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide
+    )()
 
     # create model trainer
     model = trainer_fn(
@@ -164,7 +175,9 @@ def main(args):
         ),
     ]
     if dirs["modeldir"] is not None:
-        checkpoint_cb = CheckpointCallback(save_freq=eval_freq, save_path=dirs["modeldir"])
+        checkpoint_cb = CheckpointCallback(
+            save_freq=eval_freq, save_path=dirs["modeldir"]
+        )
         callbacks.append(checkpoint_cb)
     if dirs["videodir"] is not None and not debug:
         videorec_cb = VideoRecorderCallback(
