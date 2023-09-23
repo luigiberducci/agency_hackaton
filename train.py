@@ -148,7 +148,7 @@ def main(args):
     )
 
     # create training environment
-    video_freq = eval_freq // 1000    # from freq in steps to freq in episodes, assumes 1000 steps x episode
+    video_freq = eval_freq // n_envs // 1000    # from freq in steps to freq in episodes, assumes 1000 steps x episode
     train_reward = reward_factory(reward=reward_id)
     train_env = SubprocVecEnv([make_env(env_id, i, seed=seed, reward_fn=train_reward,
                                         video_freq=video_freq, log_dir=logdir) for i in range(n_envs)])
