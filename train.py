@@ -50,7 +50,8 @@ configs = {
 }
 
 
-def make_env(env_id: str, rank: int, reward_fn: RewardFn = None, seed: int = 42, log_dir: str = None):
+def make_env(env_id: str, rank: int, reward_fn: RewardFn = None, seed: int = 42,
+             video_freq: int = 1000, log_dir: str = None):
     goal_generator = "choice"
     goals_beyond_door = [
         (5, 1),
@@ -72,7 +73,7 @@ def make_env(env_id: str, rank: int, reward_fn: RewardFn = None, seed: int = 42,
                 goal_generator=goal_generator,
                 goals=goals_beyond_door,
             )
-            env = RecordVideo(env, video_folder=f"{log_dir}/videos")
+            env = RecordVideo(env, video_folder=f"{log_dir}/videos", episode_trigger=lambda x: x % video_freq == 0)
         else:
             env = gym.make(
                 env_id,
@@ -154,7 +155,8 @@ def main(args):
 
     # create training environment
     train_reward = reward_fn_factory(reward=reward_id)
-    train_env = SubprocVecEnv([make_env(env_id, i, seed=seed, log_dir=logdir, reward_fn=train_reward) for i in range(n_envs)])
+    train_env = SubprocVecEnv([make_env(env_id, i, seed=seed, reward_fn=train_reward,
+                                        video_freq=eval_freq, log_dir=logdir) for i in range(n_envs)])
 
     # create evaluation environment
     eval_reward = reward_fn_factory(reward="sparse")
@@ -229,7 +231,7 @@ if __name__ == "__main__":
         help="Total number of timesteps to train",
     )
     parser.add_argument(
-        "--eval-freq", type=int, default=5000, help="Evaluation frequency in steps"
+        "--eval-freq", type=int, default=10000, help="Evaluation frequency in steps"
     )
     parser.add_argument(
         "--n-eval-episodes", type=int, default=5, help="Number of evaluation episodes"
