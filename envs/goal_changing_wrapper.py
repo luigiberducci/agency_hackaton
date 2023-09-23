@@ -10,10 +10,6 @@ class GoalChangingWrapper(gymnasium.Wrapper):
     def __init__(
         self, env: Env, goal_generator: str = None, p_change: float = 0.1, **kwargs
     ):
-        if goal_generator is not None:
-            self.goal_generator = goal_generator_factory(goal_generator, **kwargs)
-        else:
-            self.goal_generator = None
         self.p_change = p_change
         super().__init__(env)
 
@@ -28,8 +24,8 @@ class GoalChangingWrapper(gymnasium.Wrapper):
             for i in range(self.num_agents):
                 if i == 0:
                     goal_pos = None
-                elif self.goal_generator is not None:
-                    goal_pos = self.goal_generator(self, agent_id=f"agent_{i}")
+                elif self.env.goal_generator is not None:
+                    goal_pos = self.env.goal_generator(self, agent_id=f"agent_{i}")
                     self.put_obj(Goal(self.world, i), *goal_pos)
                 else:
                     goal_pos = self.place_obj(Goal(self.world, i), max_tries=100)
