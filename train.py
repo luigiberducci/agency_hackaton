@@ -16,8 +16,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 import envs
 import gymnasium as gym
 from gymnasium.wrappers.frame_stack import FrameStack
-from envs.control_wrapper import AutoControlWrapper
-from envs.control_wrapper import UnwrapSingleAgentDictWrapper
+from envs.control_wrapper import AutoControlWrapper, UnwrapSingleAgentDictWrapper
 from envs.goal_changing_wrapper import GoalChangingWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
 from envs.reward_wrappers import RewardWrapper, reward_factory, RewardFn
@@ -81,7 +80,7 @@ def make_env(
 
         # frame-stacking
         if stack_frames:
-            env = FrameStack(env, stack_frames)
+            env = FrameStack(env, num_stack=stack_frames)
 
         # monitor, to consistently record episode stats
         env = Monitor(env)  # keep it here, otherwise issue with vec env termination
