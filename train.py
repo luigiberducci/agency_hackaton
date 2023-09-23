@@ -20,6 +20,7 @@ from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
 from envs.reward_wrappers import RewardWrapper, reward_factory, RewardFn
+from envs.goal_changing_wrapper import GoalChangingWrapper
 from helpers.callbacks import VideoRecorderCallback
 from models import MinigridFeaturesExtractor
 
@@ -58,10 +59,15 @@ def make_env(
     reward_fn: Callable[[Env], RewardFn] | None = None,
     obj_to_hide: list[str] | None = None,
     seed: int = 42,
+    goal_changes: bool = False,
 ):
     def make() -> gym.Env:
         # base env
         env = gym.make(env_id, render_mode="rgb_array")
+
+        # goal changing wrapper
+        if goal_changes:
+            env = GoalChangingWrapper(env)
 
         # reward wrapper
         if reward_fn is not None:
@@ -101,6 +107,7 @@ def main(args):
     eval_freq = args.eval_freq
     n_eval_episodes = args.num_eval_episodes
     debug = args.debug
+    goal_changes = args.goal_changes
 
     # set seed
     if seed is None:
@@ -146,7 +153,7 @@ def main(args):
     train_env = vec_cls(
         [
             make_env(
-                env_id, i, seed=seed, reward_fn=train_reward, obj_to_hide=obj_to_hide
+                env_id, i, seed=seed, reward_fn=train_reward, obj_to_hide=obj_to_hide, goal_changes=goal_changes
             )
             for i in range(n_envs)
         ]
@@ -158,7 +165,7 @@ def main(args):
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
     eval_env = make_env(
-        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide
+        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide, goal_changes=goal_changes
     )()
 
     if stack_frames:
@@ -235,6 +242,12 @@ if __name__ == "__main__":
         nargs="?",
         const=True,
         help="Toggle partial observability by hiding goals from agents",
+    )
+
+    parser.add_argument(
+        "--goal-changes",
+        action="store_true",
+        help="Toggle goal changing wrapper",
     )
 
     # algorithm params
