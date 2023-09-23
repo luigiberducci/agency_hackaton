@@ -54,7 +54,7 @@ class CorrectedResamplingWrapper(gym.Wrapper):
         self.hash_to_cond = {}  # reconstruct condition from hash
         self.total_count = 0
 
-        self.hashing_fn = encoder if encoder is not None else g_hashing_fn
+        self.encoder = encoder if encoder is not None else g_hashing_fn
         self.max_buffer_size = max_buffer_size
         self.warmup_episodes = warmup_episodes
 
@@ -104,7 +104,7 @@ class CorrectedResamplingWrapper(gym.Wrapper):
 
         # update buffer
         initial_conditions = (initial_poses, goals)
-        hash_key = self.hashing_fn(initial_conditions)
+        hash_key = self.encoder(initial_conditions)
         if hash_key not in self.hash_to_visit:
             # if buffer is full, discard current initial conditions with prob 1/len(buffer)
             # otherwise, remove a random entry from the buffer
