@@ -80,7 +80,7 @@ def make_env(env_id: str, rank: int, reward_fn: RewardFn = None, seed: int = 42,
                 goal_generator=goal_generator,
                 goals=goals_beyond_door,
             )
-        env = TimeLimit(env, max_episode_steps=100)
+        env = TimeLimit(env, max_episode_steps=500)
 
         if reward_fn is not None:
             env = RewardWrapper(env, reward_fn=reward_fn)
