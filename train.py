@@ -10,7 +10,7 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 import envs
 import gymnasium as gym
@@ -154,7 +154,7 @@ def main(args):
 
     # create training environment
     train_reward = reward_fn_factory(reward=reward_id)
-    train_env = DummyVecEnv([make_env(env_id, i, seed=seed, log_dir=logdir, reward_fn=train_reward) for i in range(n_envs)])
+    train_env = SubprocVecEnv([make_env(env_id, i, seed=seed, log_dir=logdir, reward_fn=train_reward) for i in range(n_envs)])
 
     # create evaluation environment
     eval_reward = reward_fn_factory(reward="sparse")
