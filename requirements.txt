@@ -5,5 +5,5 @@ numpy
 gymnasium
 pygame
 moviepy
-wandb
+opencv-python
 ./gym-multigrid

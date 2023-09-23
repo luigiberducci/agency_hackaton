@@ -4,6 +4,7 @@ import pathlib
 from distutils.util import strtobool
 from typing import Callable
 
+from gymnasium.wrappers import GrayScaleObservation
 from gymnasium import Env
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 import stable_baselines3
@@ -57,6 +58,7 @@ def make_env(
     rank: int,
     reward_fn: Callable[[Env], RewardFn] | None = None,
     obj_to_hide: list[str] | None = None,
+    stack_frames: int | None = None,
     seed: int = 42,
 ):
     def make() -> gym.Env:
@@ -73,6 +75,10 @@ def make_env(
         # observation wrapper
         env = RGBImgObsWrapper(env, hide_obj_types=obj_to_hide)
         env = UnwrapSingleAgentDictWrapper(env)
+        env = GrayScaleObservation(env)
+
+        if stack_frames is not None:
+            env = FrameStack(env, num_stack=stack_frames)
 
         # monitor, to consistently record episode stats
         env = Monitor(env)  # keep it here, otherwise issue with vec env termination
@@ -146,23 +152,17 @@ def main(args):
     train_env = vec_cls(
         [
             make_env(
-                env_id, i, seed=seed, reward_fn=train_reward, obj_to_hide=obj_to_hide
+                env_id, i, seed=seed, reward_fn=train_reward, obj_to_hide=obj_to_hide, stack_frames=stack_frames
             )
             for i in range(n_envs)
         ]
     )
 
-    if stack_frames:
-        train_env = VecFrameStack(train_env, stack_frames)
-
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
     eval_env = make_env(
-        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide
+        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide, stack_frames=stack_frames
     )()
-
-    if stack_frames:
-        eval_env = FrameStack(eval_env, stack_frames)
 
     # create model trainer
     model = trainer_fn(
