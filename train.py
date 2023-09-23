@@ -124,7 +124,7 @@ def main(args):
     if not debug:
         assert logdir is not None and isinstance(logdir, str), "logdir must be specified for non-debug mode"
         date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        logdir = f"{logdir}/{algo}-{env_id}/{reward_id}-{date_str}-{seed}"
+        logdir = f"{logdir}/{algo}-{env_id}-{reward_id}-{date_str}-{seed}"
         modeldir = f"{logdir}/models"
         evaldir = f"{logdir}/eval"
         for dir in [logdir, modeldir, evaldir]:
