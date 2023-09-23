@@ -18,7 +18,7 @@ class SimpleEnv(MultiGridEnv):
         max_steps: int = 1000,
         render_mode: str = None,
         render_fps: int = None,
-        **kwargs,
+        goal_terminates: bool = True,
     ):
         self.num_agents = num_agents
         self.goals = []
@@ -39,6 +39,7 @@ class SimpleEnv(MultiGridEnv):
             agents=agents,
             agent_view_size=view_size,
             render_mode=render_mode,
+            goal_terminates=goal_terminates
         )
         self.carrying = None
 
