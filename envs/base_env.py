@@ -20,6 +20,7 @@ class SimpleEnv(MultiGridEnv):
         tile_size: int = 25,
         render_mode: str = None,
         render_fps: int = None,
+        goal_terminates: bool = True,
         **kwargs,
     ):
         self.num_agents = num_agents
@@ -41,7 +42,8 @@ class SimpleEnv(MultiGridEnv):
             agents=agents,
             agent_view_size=view_size,
             render_mode=render_mode,
-            tile_size=tile_size,
+            goal_terminates=goal_terminates,
+            tile_size=tile_size
         )
         self.carrying = None
 
