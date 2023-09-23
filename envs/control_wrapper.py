@@ -10,9 +10,10 @@ class Planner:
 
     def __init__(self, env):
         self._env = env
+        self._doors_pos = [cell.cur_pos for cell in self._env.grid.grid if cell and cell.type == "door"]
         # CEM parameters
-        self.horizon = 1  # planning horizon
-        self.n = 50  # number of samples
+        self.horizon = 2  # planning horizon
+        self.n = 30  # number of samples
         self.k = 10  # number of top samples to keep
         self.iterations = 2  # number of iterations
 
@@ -45,13 +46,16 @@ class Planner:
         """
         Compute the cost of a given position, as manhattan distance to the goal.
         """
-        return abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+        distance = abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+        door_bonus = 0.5 * sum([abs(pos[0] - door[0]) + abs(pos[1] - door[1]) for door in self._doors_pos]) / len(self._doors_pos)
+        return distance + door_bonus
 
     def plan(self, pos, dir, goal):
         """
         Planning step with CEM algorithm.
         """
         action_seqs = np.random.random_integers(0, 3, size=(self.n, self.horizon))
+        best_action_seq = action_seqs[0]
         for i in range(self.iterations):
             # add noise
             noise = np.random.random_integers(-1, 1, size=(self.n, self.horizon))
@@ -72,11 +76,12 @@ class Planner:
             costs = np.array(costs)
             topk = np.argsort(costs)[: self.k]
             action_seqs = action_seqs[topk]
+            best_action_seq = action_seqs[0]
 
             # resample
             action_seqs = np.repeat(action_seqs, self.n // self.k, axis=0)
 
-        return int(action_seqs[0][0])
+        return int(best_action_seq[0])
 
 
 class AutoControlWrapper(gymnasium.Wrapper):
@@ -154,18 +159,18 @@ class UnwrapSingleAgentDictWrapper(gymnasium.Wrapper):
         assert len(agent_ids) == 1, "this wrapper is intended for single-agent envs"
 
         original_action_space = self.action_space
-        original_observation_space = self.observation_space
+        original_obs_space = self.observation_space
 
         self.agent_id = agent_ids[0]
         self.action_space = original_action_space.spaces[self.agent_id]
-        self.observation_space = original_observation_space.spaces[self.agent_id]
+        self.observation_space = original_obs_space.spaces["image"]
 
     def reset(self, seed=None, options=None):
         obs, info = super().reset(seed=seed, options=options)
-        return obs[self.agent_id], info
+        return obs["image"], info
 
     def step(self, action):
         action = {self.agent_id: action}
         obs, reward, done, truncated, info = super().step(action)
         reward = float(reward)
-        return obs[self.agent_id], reward, done, truncated, info
+        return obs["image"], reward, done, truncated, info

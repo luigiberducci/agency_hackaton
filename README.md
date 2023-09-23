@@ -14,3 +14,18 @@ Install dependencies with:
 pip install -r requirements.txt
 ```
 
+# Known Issues
+- Import Error when launching tensorboard
+`ImportError while running tensorboard command: cannot import name '_plain_int' from 'werkzeug._internal'`
+. 
+Resolve by installing `werkzeug` with conda:
+```bash
+conda install -c conda-forge werkzeug
+```
+
+- Import Error when launching tensorboard 2:
+`ImportError: cannot import name 'COMMON_SAFE_ASCII_CHARACTERS' from 'charset_normalizer.constant'`.
+Resolved by installing `charset_normalizer` with conda:
+```bash
+conda install -c conda-forge charset-normalizer
+```

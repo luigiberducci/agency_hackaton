@@ -33,8 +33,13 @@ class DoorEnv(SimpleEnv):
             self.grid.set(12, i, Wall(self.world))
 
         # Place the door and key
-        self.grid.set(6, 4, Door(self.world, COLOR_NAMES[0], is_locked=True))
-        self.grid.set(13, 1, Key(self.world, COLOR_NAMES[0]))
+        door = Door(self.world, COLOR_NAMES[0], is_locked=True, is_open=False)
+        door.init_pos = door.cur_pos = (6, 4)
+        self.grid.set(6, 4, door)
+
+        key = Key(self.world, COLOR_NAMES[0])
+        key.init_pos = key.cur_pos = (13, 1)
+        self.grid.set(13, 1, key)
 
         self.goals = []
 
@@ -56,8 +61,9 @@ class DoorEnv(SimpleEnv):
             if i == 0:
                 goal_pos = None
             elif self.goal_generator is not None:
+                goal = Goal(self.world, i)
                 goal_pos = self.goal_generator(self, agent_id=f"agent_{i}")
-                self.put_obj(Goal(self.world, i), *goal_pos)
+                self.put_obj(goal, *goal_pos)
             else:
                 goal_pos = self.place_obj(Goal(self.world, i), max_tries=100)
             self.goals.append(goal_pos)

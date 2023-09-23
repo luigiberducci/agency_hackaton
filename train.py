@@ -1,8 +1,10 @@
 import datetime
+import json
 import pathlib
-import yaml
 
-from stable_baselines3.common.callbacks import EvalCallback
+from gymnasium.wrappers import FilterObservation, RecordVideo
+
+from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 import stable_baselines3
 import numpy as np
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -14,6 +16,7 @@ import envs
 import gymnasium as gym
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
+from envs.observation_wrapper import RGBImgObsWrapper
 
 trainer_fns = {
     "ppo": stable_baselines3.PPO,
@@ -21,10 +24,22 @@ trainer_fns = {
 }
 
 
-def make_env(env_id: str, rank: int, seed: int = 42):
+def make_env(env_id: str, rank: int, seed: int = 42, log_dir: str = None):
+    goal_generator = "choice"
+    goals_beyond_door = [
+        (8, 2), (9, 2), (10, 2),
+        (8, 3), (9, 3), (10, 3),
+        (8, 4), (9, 4), (10, 4),
+    ]  # choice of goals
     def make() -> gym.Env:
-        env = gym.make(env_id)
+        if rank == 0 and log_dir is not None:
+            env = gym.make(env_id, render_mode="rgb_array", goal_generator=goal_generator, goals=goals_beyond_door)
+            env = RecordVideo(env, video_folder=f"{log_dir}/videos")
+        else:
+            env = gym.make(env_id, render_mode="rgb_array", goal_generator=goal_generator, goals=goals_beyond_door)
         env = AutoControlWrapper(env, n_auto_agents=1)
+        env = RGBImgObsWrapper(env)
+        env = FilterObservation(env, filter_keys=["image"])
         env = UnwrapSingleAgentDictWrapper(env)
         env.reset(seed=seed + rank)
         return env
@@ -45,45 +60,74 @@ def main(args):
     seed = args.seed
     total_timesteps = args.total_timesteps
     eval_freq = args.eval_freq
-    outdir = args.outdir
+    n_eval_episodes = args.n_eval_episodes
+    track = args.track
 
     # set seed
     if seed is None:
         seed = np.random.randint(0, 1e6)
 
+    if track:
+        import wandb
+
+        logdir = modeldir = None
+        run = wandb.init(
+            project="agency_hackathon",
+            config=vars(args),
+            sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
+            monitor_gym=True,  # auto-upload the videos of agents playing the game
+            # save_code=True,  # optional
+        )
+    else:
+        # setup logdir
+        date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        logdir = f"logs/{algo}-{env_id}-{date_str}-{seed}"
+        modeldir = f"{logdir}/models"
+        pathlib.Path(logdir).mkdir(parents=True, exist_ok=True)
+
+        # copy arg params to logdir
+        with open(f"{logdir}/args.json", "w") as f:
+            json.dump(vars(args), f)
+
     # create environments and trainer
-    train_env = SubprocVecEnv([make_env(env_id, i) for i in range(num_envs)])
+    train_env = make_env(env_id, 0, log_dir=logdir)()
+        #SubprocVecEnv([make_env(env_id, i, log_dir=logdir) for i in range(num_envs)])
     trainer_fn = make_trainer(algo)
 
     # create evaluation environment
     eval_env = make_env(env_id=env_id, rank=0, seed=42)()
-    eval_env = Monitor(eval_env)
-
-    # setup logdir
-    date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    logdir = f"{outdir}/{algo}-{env_id}-{date_str}-{seed}"
-    pathlib.Path(logdir).mkdir(parents=True, exist_ok=True)
-
-    # copy arg params to logdir
-    with open(f"{logdir}/args.yaml", "w") as f:
-        yaml.dump(vars(args), f)
+    eval_env = Monitor(eval_env, logdir)
 
     # create model trainer
-    model = trainer_fn(
-        "MlpPolicy", train_env, seed=seed, tensorboard_log=logdir, verbose=1
-    )
+    model = trainer_fn("CnnPolicy", train_env, tensorboard_log=logdir, seed=seed, verbose=1)
 
     # train model
-    eval_callback = EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq)
-    model.learn(total_timesteps=total_timesteps, callback=eval_callback)
+    callbacks = [
+        EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq, n_eval_episodes=n_eval_episodes,
+                     best_model_save_path=logdir),
+        CheckpointCallback(save_freq=eval_freq, save_path=modeldir)
+    ]
+    if track:
+        from wandb.integration.sb3 import WandbCallback
+
+        wandcb = WandbCallback(model_save_path=f"models/{run.id}", verbose=2)
+        callbacks.append(wandcb)
+    model.learn(total_timesteps=total_timesteps, callback=callbacks)
 
     # evaluate trained model
     rewards, lengths = evaluate_policy(
-        model, eval_env, n_eval_episodes=10, render=True, return_episode_rewards=True
+        model,
+        eval_env,
+        n_eval_episodes=10,
+        render=True,
+        return_episode_rewards=True,
     )
 
     print(f"Reward: {np.mean(rewards):.2f} +/- {np.std(rewards):.2f}")
     print(f"Length: {np.mean(rewards):.2f} +/- {np.std(rewards):.2f}")
+
+    if track:
+        run.finish()
 
 
 if __name__ == "__main__":
@@ -93,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--env-id",
         type=str,
-        default="door-2-agents-v0",
+        default="one-door-2-agents-v0",
         help="Env ID as registered in Gymnasium",
     )
     parser.add_argument(
@@ -101,7 +145,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--algo", type=str, default="ppo", help="Algorithm to use")
     parser.add_argument(
-        "--outdir", type=str, default="logs/", help="Directory to store logs"
+        "--track", action="store_true", help="Whether to track the training on wandb"
     )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument(
@@ -111,7 +155,10 @@ if __name__ == "__main__":
         help="Total number of timesteps to train",
     )
     parser.add_argument(
-        "--eval-freq", type=int, default=1000, help="Evaluation frequency in stepst"
+        "--eval-freq", type=int, default=5000, help="Evaluation frequency in steps"
+    )
+    parser.add_argument(
+        "--n-eval-episodes", type=int, default=25, help="Number of evaluation episodes"
     )
     args = parser.parse_args()
 
