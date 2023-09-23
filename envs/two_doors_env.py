@@ -14,6 +14,10 @@ class TwoDoorsEnv(SimpleEnv):
         else:
             self.goal_generator = None
 
+        # for resampling approach
+        self.initial_poses = None
+        self.initial_goals = None
+
         super().__init__(**kwargs)
 
     def _gen_grid(self, width, height):
@@ -61,19 +65,53 @@ class TwoDoorsEnv(SimpleEnv):
                 top = (1, 1)
                 size = (5, 5)
 
-            self.place_agent(self.agents[i], top=top, size=size, max_tries=100)
+            if self.initial_poses is not None:
+                init_pose = self.initial_poses[i]
+                init_pos, init_dir = init_pose[:2], init_pose[2]
+
+                self.agents[i].pos = init_pos
+                self.agents[i].init_pos = init_pos
+                self.agents[i].dir = init_dir
+                self.agents[i].init_dir = init_dir
+
+                self.grid.set(*init_pos, self.agents[i])
+            else:
+                self.place_agent(self.agents[i], top=top, size=size, max_tries=100)
 
             # goal (for all but the altruistic agent)
-            if i == 0:
-                goal_pos = None
-            elif self.goal_generator is not None:
-                goal = Goal(self.world, i)
-                goal_pos = self.goal_generator(self, agent_id=f"agent_{i}")
-                self.put_obj(goal, *goal_pos)
+            if self.initial_goals is not None:
+                goal_pos = self.initial_goals[i]
+                if goal_pos is not None:
+                    goal = Goal(self.world, i)
+                    self.put_obj(goal, *goal_pos)
             else:
-                goal_pos = self.place_obj(Goal(self.world, i), max_tries=100)
+                if i == 0:
+                    goal_pos = None
+                elif self.goal_generator is not None:
+                    goal = Goal(self.world, i)
+                    goal_pos = self.goal_generator(self, agent_id=f"agent_{i}")
+                    self.put_obj(goal, *goal_pos)
+                else:
+                    goal_pos = self.place_obj(Goal(self.world, i), max_tries=100)
             self.goals.append(goal_pos)
 
+    def reset(self, seed=None, options=None):
+        self.initial_poses = None
+        self.initial_goals = None
+
+        # check if initial_poses and goals are specified in options
+        if options is not None:
+            if "initial_poses" in options:
+                self.initial_poses = options["initial_poses"]
+                assert len(self.initial_poses) == self.num_agents
+                assert all([len(pos) == 3 for pos in self.initial_poses])
+
+            if "goals" in options:
+                self.initial_goals = options["goals"]
+                assert len(self.initial_goals) == self.num_agents
+                assert all([len(goal) == 2 for goal in self.initial_goals if goal is not None])
+
+        return super().reset(seed=seed, options=options)
 
 def main():
     env = TwoDoorsEnv(render_mode="human")
