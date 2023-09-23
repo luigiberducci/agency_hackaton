@@ -12,18 +12,24 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 
 import envs
 import gymnasium as gym
+from gymnasium.wrappers.frame_stack import FrameStack
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
+from envs.goal_changing_wrapper import GoalChangingWrapper
 
+
+from stable_baselines3.common.vec_env import VecFrameStack
 trainer_fns = {
     "ppo": stable_baselines3.PPO,
     "sac": stable_baselines3.SAC,
 }
 
 
-def make_env(env_id: str, rank: int, seed: int = 42):
+def make_env(env_id: str, rank: int, seed: int = 42, goal_changes: bool = False):
     def make() -> gym.Env:
         env = gym.make(env_id)
+        if goal_changes:
+            env = GoalChangingWrapper(env)
         env = AutoControlWrapper(env, n_auto_agents=1)
         env = UnwrapSingleAgentDictWrapper(env)
         env.reset(seed=seed + rank)
@@ -46,6 +52,8 @@ def main(args):
     total_timesteps = args.total_timesteps
     eval_freq = args.eval_freq
     outdir = args.outdir
+    stack_frames = args.stack_frames
+    goal_changes = args.goal_changes
 
     # set seed
     if seed is None:
@@ -53,11 +61,16 @@ def main(args):
 
     # create environments and trainer
     train_env = SubprocVecEnv([make_env(env_id, i) for i in range(num_envs)])
+    if stack_frames:
+        train_env = VecFrameStack(train_env, stack_frames)
     trainer_fn = make_trainer(algo)
 
     # create evaluation environment
     eval_env = make_env(env_id=env_id, rank=0, seed=42)()
     eval_env = Monitor(eval_env)
+
+    if stack_frames:
+        eval_env = FrameStack(eval_env, stack_frames)
 
     # setup logdir
     date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -75,7 +88,7 @@ def main(args):
 
     # train model
     eval_callback = EvalCallback(eval_env, log_path=logdir, eval_freq=eval_freq)
-    model.learn(total_timesteps=total_timesteps, callback=eval_callback)
+    model.learn(total_timesteps=total_timesteps, callback=[])#eval_callback)
 
     # evaluate trained model
     rewards, lengths = evaluate_policy(
@@ -93,7 +106,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--env-id",
         type=str,
-        default="door-2-agents-v0",
+        default="one-door-2-agents-v0",
         help="Env ID as registered in Gymnasium",
     )
     parser.add_argument(
@@ -112,6 +125,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--eval-freq", type=int, default=1000, help="Evaluation frequency in stepst"
+    )
+    parser.add_argument(
+        "--stack-frames", type=int, default=None, help="Number of frames to stack"
+    )
+    parser.add_argument(
+        "--goal-changes",
+        action="store_true",
+        help="Whether to use goal changes",
     )
     args = parser.parse_args()
 
