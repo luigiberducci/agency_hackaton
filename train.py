@@ -4,22 +4,20 @@ import pathlib
 from typing import Callable
 
 from gymnasium import Env
-from gymnasium.wrappers import RecordVideo
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 import stable_baselines3
 import numpy as np
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 
 import envs
 import gymnasium as gym
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
-from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn, NegativeRewardFn, reward_factory, \
-    RewardFn
+from envs.reward_wrappers import RewardWrapper, reward_factory, RewardFn
 from helpers.callbacks import VideoRecorderCallback
 from models import MinigridFeaturesExtractor
 
@@ -50,6 +48,7 @@ configs = {
         },
     },
 }
+
 
 
 def make_env(env_id: str, rank: int, reward_fn: Callable[[Env], RewardFn] | None = None, seed: int = 42):
@@ -102,7 +101,7 @@ def main(args):
     algo = args.algo
     seed = args.seed
     eval_freq = args.eval_freq
-    n_eval_episodes = args.n_eval_episodes
+    n_eval_episodes = args.num_eval_episodes
     debug = args.debug
 
     # set seed
@@ -110,15 +109,15 @@ def main(args):
         seed = np.random.randint(0, 1e6)
 
     # setup logdir
-    logdir = args.log_dir
-    modeldir, evaldir = None, None
+    logdir, modeldir, evaldir, videodir = None, None, None, None
     if not debug:
-        assert logdir is not None and isinstance(logdir, str), "logdir must be specified for non-debug mode"
+        logdir = args.log_dir
         date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         logdir = f"{logdir}/{algo}-{env_id}-{reward_id}-{date_str}-{seed}"
         modeldir = f"{logdir}/models"
         evaldir = f"{logdir}/eval"
-        for dir in [logdir, modeldir, evaldir]:
+        videodir = f"{logdir}/videos"
+        for dir in [logdir, modeldir, evaldir, videodir]:
             pathlib.Path(dir).mkdir(parents=True, exist_ok=True)
 
         # copy arg params to logdir
@@ -139,9 +138,9 @@ def main(args):
     )
 
     # create training environment
-    video_freq = eval_freq // n_envs // 1000    # from freq in steps to freq in episodes, assumes 1000 steps x episode
     train_reward = reward_factory(reward=reward_id)
-    train_env = SubprocVecEnv([make_env(env_id, i, seed=seed, reward_fn=train_reward) for i in range(n_envs)])
+    vec_cls = SubprocVecEnv if n_envs > 1 else DummyVecEnv  # subproc introduces overhead, not worth it for 1 env
+    train_env = vec_cls([make_env(env_id, i, seed=seed, reward_fn=train_reward) for i in range(n_envs)])
 
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
@@ -169,8 +168,8 @@ def main(args):
     if modeldir is not None:
         checkpoint_cb = CheckpointCallback(save_freq=eval_freq, save_path=modeldir)
         callbacks.append(checkpoint_cb)
-    if not debug:
-        videorec_cb = VideoRecorderCallback(eval_env, render_freq=eval_freq)
+    if videodir is not None and not debug:
+        videorec_cb = VideoRecorderCallback(eval_env, video_folder=videodir, render_freq=eval_freq)
         callbacks.append(videorec_cb)
 
     # train model
@@ -217,7 +216,7 @@ if __name__ == "__main__":
         "--eval-freq", type=int, default=5000, help="Evaluation frequency in steps of vectorized envs"
     )
     parser.add_argument(
-        "--n-eval-episodes", type=int, default=5, help="Number of evaluation episodes"
+        "--num-eval-episodes", type=int, default=5, help="Number of evaluation episodes"
     )
     parser.add_argument("--debug", action="store_true", help="Debug mode, no log stored")
     args = parser.parse_args()

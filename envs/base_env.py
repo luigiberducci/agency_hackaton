@@ -6,7 +6,7 @@ import gymnasium
 import numpy as np
 
 from gym_multigrid.multigrid import MultiGridEnv, World
-from gym_multigrid.world_objects import Agent, DIR_TO_VEC
+from gym_multigrid.world_objects import Agent, DIR_TO_VEC, TILE_PIXELS
 
 
 class SimpleEnv(MultiGridEnv):
@@ -17,6 +17,7 @@ class SimpleEnv(MultiGridEnv):
         num_agents: int = 2,
         view_size: int = 7,
         max_steps: int = 1000,
+        tile_size: int = 25,
         render_mode: str = None,
         render_fps: int = None,
         **kwargs,
@@ -40,6 +41,7 @@ class SimpleEnv(MultiGridEnv):
             agents=agents,
             agent_view_size=view_size,
             render_mode=render_mode,
+            tile_size=tile_size,
         )
         self.carrying = None
 

@@ -8,7 +8,7 @@ from envs.manual_control import ManualControl
 from envs.observation_wrapper import RGBImgObsWrapper
 
 
-env = gym.make("one-door-2-agents-v0", render_mode="human", render_fps=250)
+env = gym.make("one-door-2-agents-v0", render_mode="human", render_fps=1000, tile_size=48)
 env = AutoControlWrapper(env)
 env = RGBImgObsWrapper(env)
 # env = UnwrapSingleAgentDictWrapper(env)
