@@ -56,6 +56,25 @@ class ChoiceGoalGenerator(GoalGenerator):
         # return first goal, even if it is not free
         return self.goals[0]
 
+def softmax(x: np.ndarray):
+    """
+    Compute softmax values for each sets of scores in x.
+    From https://stackoverflow.com/questions/34968722/how-to-implement-the-softmax-function-in-python
+    """
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum(axis=0)
+class CategoricalGoalGenerator(GoalGenerator):
+
+    def __init__(self, goals: list[tuple[int, int]], logits: list[float]):
+        self.goals = goals
+        self.logits = np.array(logits)
+        self.p = softmax(self.logits)
+
+    def __call__(self, env: SimpleEnv, agent_id: str = None, max_tries: int = 20):
+        idx = np.random.choice(len(self.goals), p=self.p)
+        goal = self.goals[idx]
+        return goal
+
 
 def goal_generator_factory(mode: str, **kwargs) -> GoalGenerator:
     if mode == "random":
@@ -66,5 +85,9 @@ def goal_generator_factory(mode: str, **kwargs) -> GoalGenerator:
     elif mode == "choice":
         assert "goals" in kwargs, "Missing goals."
         return ChoiceGoalGenerator(goals=kwargs["goals"])
+    elif mode == "categorical":
+        assert "goals" in kwargs, "Missing goals."
+        assert "logits" in kwargs, "Missing logits."
+        return CategoricalGoalGenerator(goals=kwargs["goals"], logits=kwargs["logits"])
     else:
         raise ValueError(f"Unknown goal generator mode: {mode}.")

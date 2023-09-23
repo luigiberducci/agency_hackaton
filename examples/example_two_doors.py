@@ -7,7 +7,7 @@ from envs.control_wrapper import AutoControlWrapper
 
 
 env = gym.make(
-    "two-doors-v0",
+    "two-doors-2-agents-v0",
     goal_generator="choice",
     goals=envs.goal_top_bottom_rows,
     render_mode="human",
