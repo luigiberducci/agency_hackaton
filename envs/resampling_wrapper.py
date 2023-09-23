@@ -6,7 +6,7 @@ import numpy as np
 
 from envs.base_env import SimpleEnv
 from envs.goal_generators import softmax
-
+from sklearn.decomposition import PCA
 
 class Encoder:
     @abstractmethod
@@ -44,7 +44,7 @@ class CorrectedResamplingWrapper(gym.Wrapper):
     def __init__(
         self,
         env: SimpleEnv,
-        hashing_fn: Callable = None,
+        encoder: Callable = None,
         max_buffer_size: int = 1000,
         warmup_episodes: int = 2,
     ):
@@ -54,7 +54,7 @@ class CorrectedResamplingWrapper(gym.Wrapper):
         self.hash_to_cond = {}  # reconstruct condition from hash
         self.total_count = 0
 
-        self.hashing_fn = hashing_fn if hashing_fn is not None else g_hashing_fn
+        self.hashing_fn = encoder if encoder is not None else g_hashing_fn
         self.max_buffer_size = max_buffer_size
         self.warmup_episodes = warmup_episodes
 

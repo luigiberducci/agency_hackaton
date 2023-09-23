@@ -5,5 +5,5 @@ numpy
 gymnasium
 pygame
 moviepy
-sklearn
+scikit-learn
 ./gym-multigrid
