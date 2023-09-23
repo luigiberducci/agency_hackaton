@@ -3,9 +3,10 @@ from __future__ import annotations
 from abc import abstractmethod
 
 import gymnasium
+import numpy as np
 
 from gym_multigrid.multigrid import MultiGridEnv, World
-from gym_multigrid.world_objects import Agent
+from gym_multigrid.world_objects import Agent, DIR_TO_VEC, TILE_PIXELS
 
 
 class SimpleEnv(MultiGridEnv):
@@ -16,6 +17,7 @@ class SimpleEnv(MultiGridEnv):
         num_agents: int = 2,
         view_size: int = 7,
         max_steps: int = 1000,
+        tile_size: int = 25,
         render_mode: str = None,
         render_fps: int = None,
         goal_terminates: bool = True,
@@ -39,7 +41,8 @@ class SimpleEnv(MultiGridEnv):
             agents=agents,
             agent_view_size=view_size,
             render_mode=render_mode,
-            goal_terminates=goal_terminates
+            tile_size=tile_size,
+            goal_terminates=goal_terminates,
         )
         self.carrying = None
 
@@ -49,13 +52,17 @@ class SimpleEnv(MultiGridEnv):
         )
 
         original_observation_space = self.observation_space
+        original_obs_as_dict = gymnasium.spaces.Dict(
+            {
+                "grid": original_observation_space,
+            }
+        )
         self.observation_space = gymnasium.spaces.Dict(
-            {f"agent_{i}": original_observation_space for i in range(num_agents)}
+            {f"agent_{i}": original_obs_as_dict for i in range(num_agents)}
         )
 
         if render_fps is not None:
             self.metadata["render_fps"] = render_fps
-
 
     def step(self, actions):
         # convert from dict to list
@@ -64,7 +71,19 @@ class SimpleEnv(MultiGridEnv):
         obs, reward, done, truncated, info = super().step(actions)
 
         # convert from list to dict
-        obs = {f"agent_{i}": obs[i] for i in range(self.num_agents)}
+        obs = {f"agent_{i}": {"grid": obs[i]} for i in range(self.num_agents)}
+
+        # expand info, setting success if the agent has reached the goal (reward > 0)
+        info.update(
+            {
+                f"agent_{i}": {
+                    "success": reward[i] > 0,
+                    "goal": self.goals[i],
+                    "pos": self.agents[i].pos,
+                }
+                for i in range(self.num_agents)
+            }
+        )
 
         return obs, reward, done, truncated, info
 
@@ -72,7 +91,19 @@ class SimpleEnv(MultiGridEnv):
         obs, info = super().reset(seed=seed, options=options)
 
         # convert from list to dict
-        obs = {f"agent_{i}": obs[i] for i in range(self.num_agents)}
+        obs = {f"agent_{i}": {"grid": obs[i]} for i in range(self.num_agents)}
+
+        # initialize info with success to False
+        info.update(
+            {
+                f"agent_{i}": {
+                    "success": False,
+                    "goal": self.goals[i],
+                    "pos": self.agents[i].pos,
+                }
+                for i in range(self.num_agents)
+            }
+        )
 
         return obs, info
 
