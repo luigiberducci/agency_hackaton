@@ -75,7 +75,8 @@ class SimpleEnv(MultiGridEnv):
         # if the action is valid, count 1
         choices = np.zeros(
             (self.width, self.height, 4, 2, 2), dtype=np.int32
-        )  # open door
+        )  # open
+
 
         doors = [
             obj for obj in self.grid.grid if obj is not None and obj.type == "door"
@@ -150,6 +151,8 @@ class SimpleEnv(MultiGridEnv):
             doors = [
                 obj for obj in self.grid.grid if obj is not None and obj.type == "door"
             ]
+            # for multi-doors, we shold consider the closest one
+            # just check if fwd_cell is a door?
             is_open = doors[0].is_open if len(doors) > 0 else True
             x, y, dir, carrying = agent.pos[0], agent.pos[1], agent.dir, agent.carrying
             choices[i] = self.choices_grid[
