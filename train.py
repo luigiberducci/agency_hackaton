@@ -5,7 +5,6 @@ from distutils.util import strtobool
 from typing import Callable
 
 from gymnasium import Env
-from minigrid.core.constants import OBJECT_TO_IDX
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 import stable_baselines3
 import numpy as np
