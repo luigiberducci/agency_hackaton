@@ -4,6 +4,7 @@ import pathlib
 from typing import Callable
 
 from gymnasium import Env
+from minigrid.core.constants import OBJECT_TO_IDX
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 import stable_baselines3
 import numpy as np
@@ -50,38 +51,31 @@ configs = {
 }
 
 
-
-def make_env(env_id: str, rank: int, reward_fn: Callable[[Env], RewardFn] | None = None, seed: int = 42):
-    goal_generator = "choice"
-    goals_beyond_door = [
-        (5, 1),
-        (6, 1),
-        (7, 1),
-        (5, 2),
-        (6, 2),
-        (7, 2),
-        (5, 3),
-        (6, 3),
-        (7, 3),
-    ]  # choice of goals
-
+def make_env(
+    env_id: str,
+    rank: int,
+    reward_fn: Callable[[Env], RewardFn] | None = None,
+    seed: int = 42,
+):
     def make() -> gym.Env:
-        env = gym.make(
-            env_id,
-            render_mode="rgb_array",
-            goal_generator=goal_generator,
-            goals=goals_beyond_door,
-        )
+        # base env
+        env = gym.make(env_id, render_mode="rgb_array")
 
+        # reward wrapper
         if reward_fn is not None:
             env = RewardWrapper(env, build_reward=reward_fn)
 
+        # control wrapper for other agents
         env = AutoControlWrapper(env, n_auto_agents=1)
-        env = RGBImgObsWrapper(env)
+
+        # observation wrapper
+        env = RGBImgObsWrapper(env, hide_obj_types=["goal"])
         env = UnwrapSingleAgentDictWrapper(env)
-        env = Monitor(env)  # keep it here otherwise issue with vec env termination
+
+        # monitor, to consistently record episode stats
+        env = Monitor(env)  # keep it here, otherwise issue with vec env termination
         env.reset(seed=seed + rank)
-        #check_env(env)
+
         return env
 
     set_random_seed(seed)
@@ -108,20 +102,20 @@ def main(args):
     if seed is None:
         seed = np.random.randint(0, 1e6)
 
-    # setup logdir
-    logdir, modeldir, evaldir, videodir = None, None, None, None
+    # setup logging
+    dirs = {dname: None for dname in ["logdir", "modeldir", "videodir"]}
     if not debug:
-        logdir = args.log_dir
+        dirs["logdir"] = args.log_dir
         date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        logdir = f"{logdir}/{algo}-{env_id}-{reward_id}-{date_str}-{seed}"
-        modeldir = f"{logdir}/models"
-        evaldir = f"{logdir}/eval"
-        videodir = f"{logdir}/videos"
-        for dir in [logdir, modeldir, evaldir, videodir]:
-            pathlib.Path(dir).mkdir(parents=True, exist_ok=True)
+        dirs["logdir"] = f"{dirs['logdir']}/{algo}-{env_id}-{reward_id}-{date_str}-{seed}"
+
+        for dir, name in zip(dirs, ["log", "models", "videos"]):
+            if dirs[dir] is None:
+                dirs[dir] = f"{dirs['logdir']}/{name}"
+            pathlib.Path(dirs[dir]).mkdir(parents=True, exist_ok=True)
 
         # copy arg params to logdir
-        with open(f"{logdir}/args.json", "w") as f:
+        with open(f"{dirs['logdir']}/args.json", "w") as f:
             json.dump(vars(args), f)
 
     # create trainer
@@ -139,8 +133,12 @@ def main(args):
 
     # create training environment
     train_reward = reward_factory(reward=reward_id)
-    vec_cls = SubprocVecEnv if n_envs > 1 else DummyVecEnv  # subproc introduces overhead, not worth it for 1 env
-    train_env = vec_cls([make_env(env_id, i, seed=seed, reward_fn=train_reward) for i in range(n_envs)])
+    vec_cls = (
+        SubprocVecEnv if n_envs > 1 else DummyVecEnv
+    )  # subproc introduces overhead, not worth it for 1 env
+    train_env = vec_cls(
+        [make_env(env_id, i, seed=seed, reward_fn=train_reward) for i in range(n_envs)]
+    )
 
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
@@ -149,7 +147,7 @@ def main(args):
     # create model trainer
     model = trainer_fn(
         env=train_env,
-        tensorboard_log=logdir,
+        tensorboard_log=dirs["logdir"],
         seed=seed,
         verbose=2,
         **trainer_params,
@@ -159,17 +157,19 @@ def main(args):
     callbacks = [
         EvalCallback(
             eval_env,
-            log_path=evaldir,
+            log_path=dirs["logdir"],
             eval_freq=eval_freq,
             n_eval_episodes=n_eval_episodes,
-            best_model_save_path=evaldir,
+            best_model_save_path=dirs["modeldir"],
         ),
     ]
-    if modeldir is not None:
-        checkpoint_cb = CheckpointCallback(save_freq=eval_freq, save_path=modeldir)
+    if dirs["modeldir"] is not None:
+        checkpoint_cb = CheckpointCallback(save_freq=eval_freq, save_path=dirs["modeldir"])
         callbacks.append(checkpoint_cb)
-    if videodir is not None and not debug:
-        videorec_cb = VideoRecorderCallback(eval_env, video_folder=videodir, render_freq=eval_freq)
+    if dirs["videodir"] is not None and not debug:
+        videorec_cb = VideoRecorderCallback(
+            eval_env, video_folder=dirs["videodir"], render_freq=eval_freq
+        )
         callbacks.append(videorec_cb)
 
     # train model
@@ -188,24 +188,54 @@ def main(args):
     print(f"Length: {np.mean(rewards):.2f} +/- {np.std(rewards):.2f}")
 
 
-
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--log-dir", type=str, default="logs", help="Log directory")
+
+    # env params
     parser.add_argument(
         "--env-id",
         type=str,
         default="one-door-2-agents-v0",
-        help="Env ID as registered in Gymnasium",
+        help="EnvID as registered in Gymnasium",
     )
-    parser.add_argument("--reward", type=str, default="sparse", help="Reward function")
     parser.add_argument(
-        "--num-envs", type=int, default=None, help="Number of vectorized environments"
+        "--reward",
+        type=str,
+        default="sparse",
+        help="Reward function to use during training, during evaluation 'sparse' reward is always used",
     )
-    parser.add_argument("--algo", type=str, default="ppo", help="Algorithm to use")
-    parser.add_argument("--seed", type=int, default=None, help="Random seed")
+    parser.add_argument(
+        "--obj-to-hide",
+        type=str,
+        choices=list(OBJECT_TO_IDX.keys()),
+        nargs="+",
+        default=["goal"],
+        help="Object to hide from the agent rgb observation",
+    )
+
+    # algorithm params
+    parser.add_argument(
+        "--num-envs",
+        type=int,
+        default=None,
+        help="Number of vectorized environments run in parallel to collect rollouts",
+    )
+    parser.add_argument(
+        "--algo",
+        type=str,
+        default="ppo",
+        help="RL algorithm to use for training the agent",
+    )
+
+    # training params
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for reproducibility, if None a random seed is used",
+    )
     parser.add_argument(
         "--total-timesteps",
         type=int,
@@ -213,12 +243,30 @@ if __name__ == "__main__":
         help="Total number of timesteps to train",
     )
     parser.add_argument(
-        "--eval-freq", type=int, default=5000, help="Evaluation frequency in steps of vectorized envs"
+        "--eval-freq",
+        type=int,
+        default=5000,
+        help="Evaluation frequency in vectorized envs steps (eg., 5000 means evaluate every 5000 * <num_envs> steps)",
     )
     parser.add_argument(
-        "--num-eval-episodes", type=int, default=5, help="Number of evaluation episodes"
+        "--num-eval-episodes",
+        type=int,
+        default=5,
+        help="Number of evaluation episodes to collect in the evaluation phase",
     )
-    parser.add_argument("--debug", action="store_true", help="Debug mode, no log stored")
+
+    # logging params
+    parser.add_argument(
+        "--log-dir",
+        type=str,
+        default="logs",
+        help="Path to log dir where to save results",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Toggle debug mode and disable logging on disk",
+    )
     args = parser.parse_args()
 
     main(args)
