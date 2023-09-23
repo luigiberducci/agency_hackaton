@@ -25,8 +25,11 @@ you can use the `run_exp.sh` and specify the `<exp_id>` as:
 ./run_exp.sh <exp_id>
 ```
 
-This will train an agent for `1M` steps using `4` parallel environments,
+This will train an agent (without observing the goals)
+for `1M` steps using `4` parallel environments,
 and save the results in `logs/`.
+
+**Note:** The script is subject to change as we add more experiments, so please check it before running.
 
 
 # Known Issues
