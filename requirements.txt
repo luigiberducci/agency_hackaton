@@ -4,4 +4,6 @@ tensorboard
 numpy
 gymnasium
 pygame
+moviepy
+wandb
 ./gym-multigrid
