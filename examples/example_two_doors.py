@@ -9,7 +9,7 @@ from envs.control_wrapper import AutoControlWrapper
 env = gym.make(
     "two-doors-v0",
     goal_generator="choice",
-    goals=[(10, 1), (10, 5)],
+    goals=envs.goal_top_bottom_rows,
     render_mode="human",
     render_fps=250
 )
