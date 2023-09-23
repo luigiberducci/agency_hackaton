@@ -11,10 +11,11 @@ import numpy as np
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecFrameStack
 
 import envs
 import gymnasium as gym
+from gymnasium.wrappers.frame_stack import FrameStack
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
@@ -95,6 +96,7 @@ def main(args):
     total_timesteps = args.total_timesteps
     n_envs = args.num_envs
     algo = args.algo
+    stack_frames = args.stack_frames
     seed = args.seed
     eval_freq = args.eval_freq
     n_eval_episodes = args.num_eval_episodes
@@ -150,11 +152,17 @@ def main(args):
         ]
     )
 
+    if stack_frames:
+        train_env = VecFrameStack(train_env, stack_frames)
+
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
     eval_env = make_env(
         env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide
     )()
+
+    if stack_frames:
+        eval_env = FrameStack(eval_env, stack_frames)
 
     # create model trainer
     model = trainer_fn(
@@ -241,6 +249,10 @@ if __name__ == "__main__":
         type=str,
         default="ppo",
         help="RL algorithm to use for training the agent",
+    )
+
+    parser.add_argument(
+        "--stack-frames", type=int, default=None, help="Number of frames to stack"
     )
 
     # training params
