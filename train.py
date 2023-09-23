@@ -20,6 +20,7 @@ from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
 from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn, NegativeRewardFn, reward_factory, \
     RewardFn
+from helpers.callbacks import VideoRecorderCallback
 from models import MinigridFeaturesExtractor
 
 trainer_fns = {
@@ -51,8 +52,7 @@ configs = {
 }
 
 
-def make_env(env_id: str, rank: int, reward_fn: Callable[[Env], RewardFn] | None = None, seed: int = 42,
-             video_freq: int = 1000, log_dir: str = None):
+def make_env(env_id: str, rank: int, reward_fn: Callable[[Env], RewardFn] | None = None, seed: int = 42):
     goal_generator = "choice"
     goals_beyond_door = [
         (5, 1),
@@ -67,21 +67,12 @@ def make_env(env_id: str, rank: int, reward_fn: Callable[[Env], RewardFn] | None
     ]  # choice of goals
 
     def make() -> gym.Env:
-        if rank == 0 and log_dir is not None:
-            env = gym.make(
-                env_id,
-                render_mode="rgb_array",
-                goal_generator=goal_generator,
-                goals=goals_beyond_door,
-            )
-            env = RecordVideo(env, video_folder=f"{log_dir}/videos", episode_trigger=lambda x: x % video_freq == 0)
-        else:
-            env = gym.make(
-                env_id,
-                render_mode="rgb_array",
-                goal_generator=goal_generator,
-                goals=goals_beyond_door,
-            )
+        env = gym.make(
+            env_id,
+            render_mode="rgb_array",
+            goal_generator=goal_generator,
+            goals=goals_beyond_door,
+        )
 
         if reward_fn is not None:
             env = RewardWrapper(env, build_reward=reward_fn)
@@ -150,13 +141,11 @@ def main(args):
     # create training environment
     video_freq = eval_freq // n_envs // 1000    # from freq in steps to freq in episodes, assumes 1000 steps x episode
     train_reward = reward_factory(reward=reward_id)
-    train_env = SubprocVecEnv([make_env(env_id, i, seed=seed, reward_fn=train_reward,
-                                        video_freq=video_freq, log_dir=logdir) for i in range(n_envs)])
+    train_env = SubprocVecEnv([make_env(env_id, i, seed=seed, reward_fn=train_reward) for i in range(n_envs)])
 
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
-    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, video_freq=n_eval_episodes,
-                        log_dir=evaldir)()
+    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=eval_reward)()
 
     # create model trainer
     model = trainer_fn(
@@ -178,7 +167,12 @@ def main(args):
         ),
     ]
     if modeldir is not None:
-        callbacks.append(CheckpointCallback(save_freq=eval_freq, save_path=modeldir))
+        checkpoint_cb = CheckpointCallback(save_freq=eval_freq, save_path=modeldir)
+        callbacks.append(checkpoint_cb)
+    if not debug:
+        videorec_cb = VideoRecorderCallback(eval_env, render_freq=5000)
+        callbacks.append(videorec_cb)
+
     # train model
     model.learn(total_timesteps=total_timesteps, callback=callbacks)
 
