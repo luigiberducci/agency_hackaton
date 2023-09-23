@@ -227,6 +227,11 @@ if __name__ == "__main__":
         help="Env ID as registered in Gymnasium",
     )
     parser.add_argument(
+        "--goal-changes",
+        action="store_true",
+        help="Toggles the online change of goals",
+    )
+    parser.add_argument(
         "--reward",
         type=str,
         default="sparse",
@@ -296,6 +301,7 @@ if __name__ == "__main__":
         action="store_true",
         help="Toggle debug mode and disable logging on disk",
     )
+
     args = parser.parse_args()
 
     main(args)

@@ -21,6 +21,7 @@ class SimpleEnv(MultiGridEnv):
         render_mode: str = None,
         render_fps: int = None,
         goal_terminates: bool = True,
+        **kwargs,
     ):
         self.num_agents = num_agents
         self.goals = []
