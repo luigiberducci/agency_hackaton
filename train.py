@@ -1,12 +1,13 @@
 import datetime
 import json
 import pathlib
+from typing import Callable
 
-from gymnasium.wrappers import RecordVideo, TimeLimit
+from gymnasium import Env
+from gymnasium.wrappers import RecordVideo
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
 import stable_baselines3
 import numpy as np
-from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
@@ -17,7 +18,7 @@ import gymnasium as gym
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
-from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn, NegativeRewardFn, reward_fn_factory, \
+from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn, NegativeRewardFn, reward_factory, \
     RewardFn
 from models import MinigridFeaturesExtractor
 
@@ -50,7 +51,7 @@ configs = {
 }
 
 
-def make_env(env_id: str, rank: int, reward_fn: RewardFn = None, seed: int = 42,
+def make_env(env_id: str, rank: int, reward_fn: Callable[[Env], RewardFn] | None = None, seed: int = 42,
              video_freq: int = 1000, log_dir: str = None):
     goal_generator = "choice"
     goals_beyond_door = [
@@ -81,10 +82,9 @@ def make_env(env_id: str, rank: int, reward_fn: RewardFn = None, seed: int = 42,
                 goal_generator=goal_generator,
                 goals=goals_beyond_door,
             )
-        env = TimeLimit(env, max_episode_steps=500)
 
         if reward_fn is not None:
-            env = RewardWrapper(env, reward_fn=reward_fn)
+            env = RewardWrapper(env, build_reward=reward_fn)
 
         env = AutoControlWrapper(env, n_auto_agents=1)
         env = RGBImgObsWrapper(env)
@@ -112,29 +112,21 @@ def main(args):
     seed = args.seed
     eval_freq = args.eval_freq
     n_eval_episodes = args.n_eval_episodes
-    track = args.track
+    debug = args.debug
 
     # set seed
     if seed is None:
         seed = np.random.randint(0, 1e6)
 
-    if track:
-        import wandb
-
-        logdir = modeldir = None
-        run = wandb.init(
-            project="agency_hackathon",
-            config=vars(args),
-            sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-            monitor_gym=True,  # auto-upload the videos of agents playing the game
-            # save_code=True,  # optional
-        )
-    else:
-        # setup logdir
+    # setup logdir
+    logdir, modeldir, evaldir = None, None, None
+    if not debug:
         date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         logdir = f"logs/{algo}-{env_id}/{reward_id}-{date_str}-{seed}"
         modeldir = f"{logdir}/models"
-        pathlib.Path(logdir).mkdir(parents=True, exist_ok=True)
+        evaldir = f"{logdir}/eval"
+        for dir in [logdir, modeldir, evaldir]:
+            pathlib.Path(dir).mkdir(parents=True, exist_ok=True)
 
         # copy arg params to logdir
         with open(f"{logdir}/args.json", "w") as f:
@@ -154,13 +146,15 @@ def main(args):
     )
 
     # create training environment
-    train_reward = reward_fn_factory(reward=reward_id)
+    video_freq = eval_freq // n_envs // 1000    # from freq in steps to freq in episodes, assumes 1000 steps x episode
+    train_reward = reward_factory(reward=reward_id)
     train_env = SubprocVecEnv([make_env(env_id, i, seed=seed, reward_fn=train_reward,
-                                        video_freq=eval_freq, log_dir=logdir) for i in range(n_envs)])
+                                        video_freq=video_freq, log_dir=logdir) for i in range(n_envs)])
 
     # create evaluation environment
-    eval_reward = reward_fn_factory(reward="sparse")
-    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=eval_reward)()
+    eval_reward = reward_factory(reward="sparse")
+    eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, video_freq=n_eval_episodes,
+                        log_dir=evaldir)()
 
     # create model trainer
     model = trainer_fn(
@@ -171,22 +165,19 @@ def main(args):
         **trainer_params,
     )
 
-    # train model
+    # setup callabacks
     callbacks = [
         EvalCallback(
             eval_env,
-            log_path=logdir,
+            log_path=evaldir,
             eval_freq=eval_freq,
             n_eval_episodes=n_eval_episodes,
-            best_model_save_path=logdir,
+            best_model_save_path=evaldir,
         ),
-        CheckpointCallback(save_freq=eval_freq, save_path=modeldir),
     ]
-    if track:
-        from wandb.integration.sb3 import WandbCallback
-
-        wandcb = WandbCallback(model_save_path=f"models/{run.id}", verbose=2)
-        callbacks.append(wandcb)
+    if modeldir is not None:
+        callbacks.append(CheckpointCallback(save_freq=eval_freq, save_path=modeldir))
+    # train model
     model.learn(total_timesteps=total_timesteps, callback=callbacks)
 
     # evaluate trained model
@@ -201,8 +192,6 @@ def main(args):
     print(f"Reward: {np.mean(rewards):.2f} +/- {np.std(rewards):.2f}")
     print(f"Length: {np.mean(rewards):.2f} +/- {np.std(rewards):.2f}")
 
-    if track:
-        run.finish()
 
 
 if __name__ == "__main__":
@@ -220,9 +209,6 @@ if __name__ == "__main__":
         "--num-envs", type=int, default=None, help="Number of vectorized environments"
     )
     parser.add_argument("--algo", type=str, default="ppo", help="Algorithm to use")
-    parser.add_argument(
-        "--track", action="store_true", help="Whether to track the training on wandb"
-    )
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument(
         "--total-timesteps",
@@ -236,6 +222,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n-eval-episodes", type=int, default=5, help="Number of evaluation episodes"
     )
+    parser.add_argument("--debug", action="store_true", help="Debug mode, no log stored")
     args = parser.parse_args()
 
     main(args)
