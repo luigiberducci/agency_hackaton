@@ -37,9 +37,10 @@ class RGBImgObsWrapper(gym.core.ObservationWrapper):
             dtype="uint8",
         )
 
-        self.observation_space = spaces.Dict(
-            {**self.observation_space.spaces, "image": new_image_space}
-        )
+        for agent in self.observation_space:
+            self.observation_space[agent] = spaces.Dict(
+                {**self.observation_space[agent].spaces, "image": new_image_space}
+            )
 
     def observation(self, obs):
         rgb_img = self.get_frame(
@@ -47,4 +48,7 @@ class RGBImgObsWrapper(gym.core.ObservationWrapper):
             hide_obj_types=self.hide_obj_types
         )
 
-        return {**obs, "image": rgb_img}
+        for agent in obs:
+            obs[agent] = {**obs[agent], "image": rgb_img}
+
+        return obs
