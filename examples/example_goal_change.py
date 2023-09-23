@@ -1,19 +1,21 @@
-from time import sleep
+import logging
 
 import gymnasium as gym
 
 import envs  # keep it, otherwise gym.make() won't work on custom envs
-from envs.control_wrapper import AutoControlWrapper
+from envs.control_wrapper import AutoControlWrapper, UnwrapSingleAgentDictWrapper
+from envs.goal_changing_wrapper import GoalChangingWrapper
+from envs.manual_control import ManualControl
+from envs.observation_wrapper import RGBImgObsWrapper
 
 
-env = gym.make(
-    "two-doors-2-agents-v0",
-    goal_generator="choice",
-    goals=envs.goal_top_bottom_rows,
-    render_mode="human",
-    render_fps=250
-)
+env = gym.make("one-door-2-agents-v0", render_mode="human", render_fps=100)
+env = GoalChangingWrapper(env, p_change=0.1)
 env = AutoControlWrapper(env)
+env = RGBImgObsWrapper(env, hide_obj_types=["goal"])
+# env = UnwrapSingleAgentDictWrapper(env)
+# env = ManualControl(env)
+# env.start()
 
 print(env.action_space)
 print(env.observation_space)
