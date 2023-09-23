@@ -20,10 +20,11 @@ class RGBImgObsWrapper(gym.core.ObservationWrapper):
         ![RGBImgObsWrapper](../figures/lavacrossing_RGBImgObsWrapper.png)
     """
 
-    def __init__(self, env, tile_size=8):
+    def __init__(self, env, tile_size=8,hide_obj_types: list[str] = []):
         super().__init__(env)
 
         self.tile_size = tile_size
+        self.hide_obj_types = hide_obj_types
 
         new_image_space = spaces.Box(
             low=0,
@@ -43,7 +44,8 @@ class RGBImgObsWrapper(gym.core.ObservationWrapper):
 
     def observation(self, obs):
         rgb_img = self.get_frame(
-            highlight=self.unwrapped.highlight, tile_size=self.tile_size
+            highlight=self.unwrapped.highlight, tile_size=self.tile_size,
+            hide_obj_types=self.hide_obj_types
         )
 
         for agent in obs:
