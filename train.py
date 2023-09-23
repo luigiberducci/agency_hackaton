@@ -1,6 +1,7 @@
 import datetime
 import json
 import pathlib
+from distutils.util import strtobool
 from typing import Callable
 
 from gymnasium import Env
@@ -91,7 +92,7 @@ def make_trainer(algo: str):
 def main(args):
     env_id = args.env_id
     reward_id = args.reward
-    obj_to_hide = args.obj_to_hide
+    obj_to_hide = ["goal"] if args.hide_goals else []
     total_timesteps = args.total_timesteps
     n_envs = args.num_envs
     algo = args.algo
@@ -109,9 +110,10 @@ def main(args):
     if not debug:
         dirs["logdir"] = args.log_dir
         date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        goal_str = "hide-goals" if args.hide_goals else "show-goals"
         dirs[
             "logdir"
-        ] = f"{dirs['logdir']}/{algo}-{env_id}-{reward_id}-{date_str}-{seed}"
+        ] = f"{dirs['logdir']}/{algo}-{env_id}-{goal_str}-{reward_id}-{date_str}-{seed}"
 
         for dir, name in zip(dirs, ["log", "models", "videos"]):
             if dirs[dir] is None:
@@ -220,12 +222,12 @@ if __name__ == "__main__":
         help="Reward function to use during training, during evaluation 'sparse' reward is always used",
     )
     parser.add_argument(
-        "--obj-to-hide",
-        type=str,
-        choices=list(OBJECT_TO_IDX.keys()),
-        nargs="+",
-        default=["goal"],
-        help="Object to hide from the agent rgb observation",
+        "--hide-goals",
+        type=lambda x: bool(strtobool(x)),
+        default=True,
+        nargs="?",
+        const=True,
+        help="Toggle partial observability by hiding goals from agents",
     )
 
     # algorithm params
