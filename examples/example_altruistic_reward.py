@@ -6,10 +6,10 @@ import envs  # keep it, otherwise gym.make() won't work on custom envs
 from envs.control_wrapper import AutoControlWrapper, UnwrapSingleAgentDictWrapper
 from envs.manual_control import ManualControl
 from envs.observation_wrapper import RGBImgObsWrapper
-from envs.reward_wrappers import RewardWrapper, AltruisticRewardFn, SparseRewardFn
+from envs.reward_wrappers import RewardWrapper, AltruisticRewardFn
 
-env = gym.make("one-door-2-agents-v0", render_mode="human", render_fps=250)
-env = RewardWrapper(env, reward_fn=AltruisticRewardFn())
+env = gym.make("one-door-2-agents-v0", render_mode="human", render_fps=10)
+env = RewardWrapper(env, build_reward=AltruisticRewardFn)
 env = AutoControlWrapper(env)
 env = RGBImgObsWrapper(env)
 #env = UnwrapSingleAgentDictWrapper(env)
@@ -20,7 +20,7 @@ print(env.action_space)
 print(env.observation_space)
 
 seed = 42
-n_episodes = 3
+n_episodes = 10
 
 
 for i in range(n_episodes):
