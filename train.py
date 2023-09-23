@@ -170,7 +170,7 @@ def main(args):
         checkpoint_cb = CheckpointCallback(save_freq=eval_freq, save_path=modeldir)
         callbacks.append(checkpoint_cb)
     if not debug:
-        videorec_cb = VideoRecorderCallback(eval_env, render_freq=5000)
+        videorec_cb = VideoRecorderCallback(eval_env, render_freq=eval_freq)
         callbacks.append(videorec_cb)
 
     # train model
@@ -214,7 +214,7 @@ if __name__ == "__main__":
         help="Total number of timesteps to train",
     )
     parser.add_argument(
-        "--eval-freq", type=int, default=10000, help="Evaluation frequency in steps"
+        "--eval-freq", type=int, default=5000, help="Evaluation frequency in steps of vectorized envs"
     )
     parser.add_argument(
         "--n-eval-episodes", type=int, default=5, help="Number of evaluation episodes"
