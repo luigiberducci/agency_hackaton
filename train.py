@@ -119,7 +119,7 @@ def main(args):
         seed = np.random.randint(0, 1e6)
 
     # setup logdir
-    logdir = args.logdir
+    logdir = args.log_dir
     modeldir, evaldir = None, None
     if not debug:
         assert logdir is not None and isinstance(logdir, str), "logdir must be specified for non-debug mode"
