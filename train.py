@@ -119,10 +119,12 @@ def main(args):
         seed = np.random.randint(0, 1e6)
 
     # setup logdir
-    logdir, modeldir, evaldir = None, None, None
+    logdir = args.logdir
+    modeldir, evaldir = None, None
     if not debug:
+        assert logdir is not None and isinstance(logdir, str), "logdir must be specified for non-debug mode"
         date_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        logdir = f"logs/{algo}-{env_id}/{reward_id}-{date_str}-{seed}"
+        logdir = f"{logdir}/{algo}-{env_id}/{reward_id}-{date_str}-{seed}"
         modeldir = f"{logdir}/models"
         evaldir = f"{logdir}/eval"
         for dir in [logdir, modeldir, evaldir]:
@@ -198,6 +200,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("--log-dir", type=str, default="logs", help="Log directory")
     parser.add_argument(
         "--env-id",
         type=str,

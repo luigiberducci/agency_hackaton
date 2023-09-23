@@ -39,7 +39,7 @@ reward=$(echo $exp_args | cut -d' ' -f6)  # reward type as defined in envs.rewar
 
 cmd="
 python ${script} --log-dir ${logdir}/${exp_name} --env-id ${env_id} --num-envs ${nenvs} \
-                 --total-timesteps ${nsteps} --reward-type ${reward}
+                 --total-timesteps ${nsteps} --reward ${reward}
 "
 
 echo $cmd
