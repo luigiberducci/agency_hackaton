@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Callable
 
 import gym
@@ -6,6 +7,26 @@ import numpy as np
 from envs.base_env import SimpleEnv
 from envs.goal_generators import softmax
 
+
+class Encoder:
+    @abstractmethod
+    def __call__(self, x):
+        raise NotImplementedError
+
+    @abstractmethod
+    def update(self, X):
+        raise NotImplementedError
+
+
+class PCAEncoder(Encoder):
+    def __init__(self, n_components=2):
+        self.pca = PCA(n_components=n_components)
+
+    def __call__(self, x):
+        return self.pca.transform(x)
+
+    def update(self, X):
+        self.pca.fit(X)
 
 class CorrectedResamplingWrapper(gym.Wrapper):
     """
