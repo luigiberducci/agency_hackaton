@@ -17,7 +17,8 @@ import gymnasium as gym
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
-from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn, NegativeRewardFn, reward_fn_factory
+from envs.reward_wrappers import SparseRewardFn, RewardWrapper, AltruisticRewardFn, NegativeRewardFn, reward_fn_factory, \
+    RewardFn
 from models import MinigridFeaturesExtractor
 
 trainer_fns = {
@@ -49,7 +50,7 @@ configs = {
 }
 
 
-def make_env(env_id: str, rank: int, reward_fn: None, seed: int = 42, log_dir: str = None):
+def make_env(env_id: str, rank: int, reward_fn: RewardFn = None, seed: int = 42, log_dir: str = None):
     goal_generator = "choice"
     goals_beyond_door = [
         (5, 1),
@@ -156,7 +157,7 @@ def main(args):
     train_env = DummyVecEnv([make_env(env_id, i, seed=seed, log_dir=logdir, reward_fn=train_reward) for i in range(n_envs)])
 
     # create evaluation environment
-    eval_reward = reward_fn_factory(reward=reward_id)
+    eval_reward = reward_fn_factory(reward="sparse")
     eval_env = make_env(env_id=env_id, rank=0, seed=42, reward_fn=eval_reward)()
 
     # create model trainer
