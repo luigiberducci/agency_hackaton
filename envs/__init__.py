@@ -5,7 +5,7 @@ from .two_doors_env import TwoDoorsEnv
 gym.register(
     "one-door-2-agents-v0",
     entry_point="envs.door_env:DoorEnv",
-    kwargs={"width": 12, "height": 5, "num_agents": 2, "max_steps": 500},
+    kwargs={"width": 12, "height": 5, "num_agents": 2, "max_steps": 1000},
 )
 
 gym.register(
