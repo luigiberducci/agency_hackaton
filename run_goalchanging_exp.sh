@@ -1,6 +1,6 @@
 #!/bin/bash
 
-logdir=logs/
+logdir=logs/changing-goals
 
 # create list of exp arguments
 args=(
