@@ -5,11 +5,12 @@ logdir=logs/
 # create list of exp arguments
 args=(
 
-  "one-door train.py one-door-2-agents-v0 True 4 1000000 neg_distance 0.1 4"
-  "one-door train.py one-door-2-agents-v0 True 4 1000000 neg_distance 0.1 8"
-  "one-door train.py one-door-2-agents-v0 True 4 1000000 neg_distance 0.4 8"
+  "changing-goal train.py one-door-2-agents-v0 True 4 1000000 neg_distance 0.1 0"
+  "changing-goal train.py one-door-2-agents-v0 True 4 1000000 neg_distance 0.1 4"
+  "changing-goal train.py one-door-2-agents-v0 True 4 1000000 neg_distance 0.1 6"
+  "changing-goal train.py one-door-2-agents-v0 True 4 1000000 neg_distance 0.4 6"
+  "changing-goal train.py one-door-2-agents-v0 False 4 1000000 neg_distance 0.1 6"
 
-  "one-door train.py one-door-2-agents-v0 False 4 1000000 neg_distance 0.1 16"
 
 
 )
