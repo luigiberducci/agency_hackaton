@@ -24,10 +24,10 @@ args=(
   "two-doors train.py two-doors-2-agents-skewed-v1 True 4 2000000 neg_distance False"
   #
   # exp two-doors with hidden goals, skewed goal distribution towards top row
-  "two-doors train.py two-doors-2-agents-skewed-v0 True 4 2000000 neg_distance True"
+  "two-doors-corrected train.py two-doors-2-agents-skewed-v0 True 4 2000000 neg_distance True"
   #
   # exp two-doors with hidden goals, skewed goal distribution towards bottom row
-  "two-doors train.py two-doors-2-agents-skewed-v0 True 4 2000000 neg_distance True"
+  "two-doors-corrected train.py two-doors-2-agents-skewed-v0 True 4 2000000 neg_distance True"
 )
 
 # check the only input is exp-id
