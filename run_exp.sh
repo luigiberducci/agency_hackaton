@@ -6,15 +6,30 @@ logdir=logs/
 args=(
   # exp-name script env-id hide-goals num-envs tot-steps reward
   #
-  # exp with hidden goals
+  # exp one-door with hidden goals
   "one-door train.py one-door-2-agents-v0 True 4 1000000 sparse"
   "one-door train.py one-door-2-agents-v0 True 4 1000000 altruistic"
   "one-door train.py one-door-2-agents-v0 True 4 1000000 neg_distance"
   #
-  # exp with visible goals
+  # exp one-door with visible goals
   "one-door train.py one-door-2-agents-v0 False 4 1000000 sparse"
   "one-door train.py one-door-2-agents-v0 False 4 1000000 altruistic"
   "one-door train.py one-door-2-agents-v0 False 4 1000000 neg_distance"
+  #
+  # exp two-doors with hidden goals, uniform goal distribution (binomial in y coord)
+  "two-doors train.py two-doors-2-agents-v0 True 4 1000000 sparse"
+  "two-doors train.py two-doors-2-agents-v0 True 4 1000000 altruistic"
+  "two-doors train.py two-doors-2-agents-v0 True 4 1000000 neg_distance"
+  #
+  # exp two-doors with hidden goals, skewed goal distribution towards top row
+  "two-doors train.py two-doors-2-agents-skewed-v0 True 4 1000000 sparse"
+  "two-doors train.py two-doors-2-agents-skewed-v0 True 4 1000000 altruistic"
+  "two-doors train.py two-doors-2-agents-skewed-v0 True 4 1000000 neg_distance"
+  #
+  # exp two-doors with hidden goals, skewed goal distribution towards bottom row
+  "two-doors train.py two-doors-2-agents-skewed-v1 True 4 1000000 sparse"
+  "two-doors train.py two-doors-2-agents-skewed-v1 True 4 1000000 altruistic"
+  "two-doors train.py two-doors-2-agents-skewed-v1 True 4 1000000 neg_distance"
 )
 
 # check the only input is exp-id
