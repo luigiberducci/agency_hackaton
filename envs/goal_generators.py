@@ -56,6 +56,7 @@ class ChoiceGoalGenerator(GoalGenerator):
         # return first goal, even if it is not free
         return self.goals[0]
 
+
 def softmax(x: np.ndarray):
     """
     Compute softmax values for each sets of scores in x.
@@ -63,8 +64,9 @@ def softmax(x: np.ndarray):
     """
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum(axis=0)
-class CategoricalGoalGenerator(GoalGenerator):
 
+
+class CategoricalGoalGenerator(GoalGenerator):
     def __init__(self, goals: list[tuple[int, int]], logits: list[float]):
         self.goals = goals
         self.logits = np.array(logits)

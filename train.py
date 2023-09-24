@@ -11,14 +11,16 @@ import numpy as np
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.utils import set_random_seed
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecFrameStack
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 
 import envs
 import gymnasium as gym
+from gymnasium.wrappers import GrayScaleObservation
 from gymnasium.wrappers.frame_stack import FrameStack
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
+from envs.resampling_wrapper import CorrectedResamplingWrapper
 from envs.reward_wrappers import RewardWrapper, reward_factory, RewardFn
 from envs.goal_changing_wrapper import GoalChangingWrapper
 from helpers.callbacks import VideoRecorderCallback
@@ -58,12 +60,18 @@ def make_env(
     rank: int,
     reward_fn: Callable[[Env], RewardFn] | None = None,
     obj_to_hide: list[str] | None = None,
-    seed: int = 42,
+    stack_frames: int | None = None,
     goal_changes: float = 0.0,
+    distr_correction: bool = False,
+    seed: int = 42,
 ):
     def make() -> gym.Env:
         # base env
         env = gym.make(env_id, render_mode="rgb_array")
+
+        # correct distribution initial conditions
+        if distr_correction:
+            env = CorrectedResamplingWrapper(env)
 
         # goal changing wrapper
         if goal_changes:
@@ -79,6 +87,10 @@ def make_env(
         # observation wrapper
         env = RGBImgObsWrapper(env, hide_obj_types=obj_to_hide)
         env = UnwrapSingleAgentDictWrapper(env)
+
+        if stack_frames is not None and stack_frames > 1:
+            env = GrayScaleObservation(env)
+            env = FrameStack(env, num_stack=stack_frames)
 
         # monitor, to consistently record episode stats
         env = Monitor(env)  # keep it here, otherwise issue with vec env termination
@@ -98,16 +110,17 @@ def make_trainer(algo: str):
 def main(args):
     env_id = args.env_id
     reward_id = args.reward
+    distr_correction = args.distr_correction
+    goal_changes = args.goal_changes
     obj_to_hide = ["goal"] if args.hide_goals else []
+    stack_frames = args.stack_frames
     total_timesteps = args.total_timesteps
     n_envs = args.num_envs
     algo = args.algo
-    stack_frames = args.stack_frames
     seed = args.seed
     eval_freq = args.eval_freq
     n_eval_episodes = args.num_eval_episodes
     debug = args.debug
-    goal_changes = args.goal_changes
 
     # set seed
     if seed is None:
@@ -153,23 +166,21 @@ def main(args):
     train_env = vec_cls(
         [
             make_env(
-                env_id, i, seed=seed, reward_fn=train_reward, obj_to_hide=obj_to_hide, goal_changes=goal_changes
+                env_id=env_id, rank=i, seed=seed, reward_fn=train_reward,
+                distr_correction=distr_correction, goal_changes=goal_changes,
+                obj_to_hide=obj_to_hide, stack_frames=stack_frames,
             )
             for i in range(n_envs)
         ]
     )
 
-    if stack_frames:
-        train_env = VecFrameStack(train_env, stack_frames)
-
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
     eval_env = make_env(
-        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide, goal_changes=goal_changes
+        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward,
+        distr_correction=distr_correction, goal_changes=goal_changes,
+        obj_to_hide=obj_to_hide, stack_frames=stack_frames,
     )()
-
-    if stack_frames:
-        eval_env = FrameStack(eval_env, stack_frames)
 
     # create model trainer
     model = trainer_fn(
@@ -192,7 +203,7 @@ def main(args):
     ]
     if dirs["modeldir"] is not None:
         checkpoint_cb = CheckpointCallback(
-            save_freq=eval_freq, save_path=dirs["modeldir"]
+            save_freq=100000, save_path=dirs["modeldir"]
         )
         callbacks.append(checkpoint_cb)
     if dirs["videodir"] is not None and not debug:
@@ -236,6 +247,12 @@ if __name__ == "__main__":
         help="Reward function to use during training, during evaluation 'sparse' reward is always used",
     )
     parser.add_argument(
+        "--goal-changes",
+        type=float,
+        default=0.0,
+        help="Probability of changing the goal"
+    )
+    parser.add_argument(
         "--hide-goals",
         type=lambda x: bool(strtobool(x)),
         default=True,
@@ -243,12 +260,16 @@ if __name__ == "__main__":
         const=True,
         help="Toggle partial observability by hiding goals from agents",
     )
-
     parser.add_argument(
-        "--goal-changes",
-        type=float,
-        default=0.0,
-        help="Probability of changing the goal"
+        "--distr-correction",
+        type=lambda x: bool(strtobool(x)),
+        default=False,
+        nargs="?",
+        const=True,
+        help="Toggle anomaly-based correction of initial distribution",
+    )
+    parser.add_argument(
+        "--stack-frames", type=int, default=None, help="Number of frames to stack"
     )
 
     # algorithm params
@@ -263,10 +284,6 @@ if __name__ == "__main__":
         type=str,
         default="ppo",
         help="RL algorithm to use for training the agent",
-    )
-
-    parser.add_argument(
-        "--stack-frames", type=int, default=None, help="Number of frames to stack"
     )
 
     # training params

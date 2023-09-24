@@ -81,6 +81,7 @@ class SimpleEnv(MultiGridEnv):
                     "success": reward[i] > 0,
                     "goal": self.goals[i],
                     "pos": self.agents[i].pos,
+                    "dir": self.agents[i].dir,
                 }
                 for i in range(self.num_agents)
             }
@@ -101,6 +102,7 @@ class SimpleEnv(MultiGridEnv):
                     "success": False,
                     "goal": self.goals[i],
                     "pos": self.agents[i].pos,
+                    "dir": self.agents[i].dir,
                 }
                 for i in range(self.num_agents)
             }

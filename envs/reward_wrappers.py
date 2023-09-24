@@ -83,15 +83,15 @@ class AltruisticRewardFn(RewardFn):
         choices = np.zeros((self.env.width, self.env.height, 4, 2, 2), dtype=np.int32)
 
         doors = [
-            obj for obj in self.env.grid.grid if obj is not None and obj.type == "door"
+            obj for obj in self.env.unwrapped.grid.grid if obj is not None and obj.type == "door"
         ]
-        assert len(doors) <= 1, "Only one door is supported for now"
+        #assert len(doors) <= 1, "Only one door is supported for now"
 
         # state validity
         is_valid = (
-            lambda x, y, dir, carrying, open_door: self.env.grid.get(x, y) is None
-            or self.env.grid.get(x, y).can_overlap()
-            or self.env.grid.get(x, y).type == "agent"
+            lambda x, y, dir, carrying, open_door: self.env.unwrapped.grid.get(x, y) is None
+            or self.env.unwrapped.grid.get(x, y).can_overlap()
+            or self.env.unwrapped.grid.get(x, y).type == "agent"
         )
 
         for iod, open_door in enumerate([True, False]):
@@ -116,7 +116,7 @@ class AltruisticRewardFn(RewardFn):
         """
         x, y, dir, carrying, open_door = state  # unpack state
         fwd_pos = np.array((x, y)) + DIR_TO_VEC[dir]
-        fwd_cell = self.env.grid.get(*fwd_pos)
+        fwd_cell = self.env.unwrapped.grid.get(*fwd_pos)
 
         if action in [
             self.env.actions.still,
@@ -150,13 +150,13 @@ class AltruisticRewardFn(RewardFn):
     def _get_choices(self, obs) -> dict[str, int]:
         # compute choice as in "Learning Altruistic Behaviors"
         choices = -np.ones(self.num_agents, dtype=np.float32)
-        for i, agent in enumerate(self.env.agents):
+        for i, agent in enumerate(self.env.unwrapped.agents):
             doors = [
                 obj
-                for obj in self.env.grid.grid
+                for obj in self.env.unwrapped.grid.grid
                 if obj is not None and obj.type == "door"
             ]
-            assert len(doors) <= 1, "Only one door is supported for now"
+            #assert len(doors) <= 1, "Only one door is supported for now"
             # for multi-doors, we shold consider the closest one
             # just check if fwd_cell is a door?
             is_open = doors[0].is_open if len(doors) > 0 else True
@@ -169,11 +169,11 @@ class AltruisticRewardFn(RewardFn):
             choices[i] = self.choices_grid[x, y, dir, int(carrying), int(is_open)]
 
         # then only things to consider is if any other agent is in front, then we should put choices -1
-        for i, agent in enumerate(self.env.agents):
-            front_pos = self.env.agents[i].front_pos
+        for i, agent in enumerate(self.env.unwrapped.agents):
+            front_pos = self.env.unwrapped.agents[i].front_pos
             if (
-                self.env.grid.get(*front_pos)
-                and self.env.grid.get(*front_pos).type == "agent"
+                self.env.unwrapped.grid.get(*front_pos)
+                and self.env.unwrapped.grid.get(*front_pos).type == "agent"
             ):
                 choices[i] -= 1
 

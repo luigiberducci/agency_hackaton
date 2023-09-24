@@ -10,7 +10,7 @@ class Planner:
 
     def __init__(self, env):
         self._env = env
-        self._doors_pos = [cell.cur_pos for cell in self._env.grid.grid if cell and cell.type == "door"]
+        self._doors_pos = [cell.cur_pos for cell in self._env.unwrapped.grid.grid if cell and cell.type == "door"]
         # CEM parameters
         self.horizon = 2  # planning horizon
         self.n = 30  # number of samples
@@ -34,8 +34,8 @@ class Planner:
                 [self.move_forward_x[dir], self.move_forward_y[dir]]
             )
             if (
-                self._env.grid.get(*next_pos) is None
-                or self._env.grid.get(*next_pos).can_overlap()
+                self._env.unwrapped.grid.get(*next_pos) is None
+                or self._env.unwrapped.grid.get(*next_pos).can_overlap()
             ):
                 pos = next_pos
         else:
@@ -117,13 +117,13 @@ class AutoControlWrapper(gymnasium.Wrapper):
         assert isinstance(actions, dict)
 
         # extend single-agent action with auto-controlled agents
-        n_agents = len(self.env.agents)
+        n_agents = len(self.env.unwrapped.agents)
         for i in range(n_agents - self.n_auto_agents, n_agents):
             iauto = i - (n_agents - self.n_auto_agents)
             agent_id = self.auto_agent_ids[iauto]
 
-            pos, dir = self.env.agents[i].pos, self.env.agents[i].dir
-            goal = self.env.goals[i]
+            pos, dir = self.env.unwrapped.agents[i].pos, self.env.unwrapped.agents[i].dir
+            goal = self.env.unwrapped.goals[i]
             act = self.planner.plan(pos, dir, goal)
 
             # add noise
