@@ -59,7 +59,7 @@ def make_env(
     reward_fn: Callable[[Env], RewardFn] | None = None,
     obj_to_hide: list[str] | None = None,
     seed: int = 42,
-    goal_changes: bool = False,
+    goal_changes: float = 0.0,
 ):
     def make() -> gym.Env:
         # base env
@@ -67,7 +67,7 @@ def make_env(
 
         # goal changing wrapper
         if goal_changes:
-            env = GoalChangingWrapper(env)
+            env = GoalChangingWrapper(env, p_change=goal_changes)
 
         # reward wrapper
         if reward_fn is not None:
@@ -246,8 +246,9 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--goal-changes",
-        action="store_true",
-        help="Toggle goal changing wrapper",
+        type=float,
+        default=0.0,
+        help="Probability of changing the goal"
     )
 
     # algorithm params
