@@ -1,33 +1,34 @@
 #!/bin/bash
 
-logdir=logs/
+logdir=logs/distr
 
 # create list of exp arguments
 args=(
   # exp-name script env-id hide-goals num-envs tot-steps reward distr-correction
   #
-  # exp one-door with hidden goals
-  "one-door-xl train.py one-door-2-agents-v0 True 4 2000000 sparse False"
-  "one-door-xl train.py one-door-2-agents-v0 True 4 2000000 altruistic False"
-  "one-door-xl train.py one-door-2-agents-v0 True 4 2000000 neg_distance False"
+  # exp two-doors with visible vs hidden goals
+  #"one-door train.py one-door-2-agents-v0 True 4 1000000 sparse False"
+  #"one-door train.py one-door-2-agents-v0 True 4 1000000 altruistic False"
+  #"one-door train.py one-door-2-agents-v0 True 4 1000000 neg_distance False"
+  "two-doors train.py one-door-2-agents-v0 True 4 1000000 neg_distance False"
   #
-  # exp one-door with visible goals
-  "one-door-xl train.py one-door-2-agents-v0 False 4 2000000 sparse False"
-  "one-door-xl train.py one-door-2-agents-v0 False 4 2000000 altruistic False"
-  "one-door-xl train.py one-door-2-agents-v0 False 4 2000000 neg_distance False"
+  #"one-door train.py one-door-2-agents-v0 False 4 1000000 sparse False"
+  #"one-door train.py one-door-2-agents-v0 False 4 1000000 altruistic False"
+  #"one-door train.py one-door-2-agents-v0 False 4 1000000 neg_distance False"
+  "two-doors train.py one-door-2-agents-v0 False 4 1000000 neg_distance False"
   #
-  #
-  # exp two-doors with hidden goals, skewed goal distribution towards top row
-  "two-doors train.py two-doors-2-agents-skewed-v0 True 4 2000000 neg_distance False"
-  #
-  # exp two-doors with hidden goals, skewed goal distribution towards bottom row
-  "two-doors train.py two-doors-2-agents-skewed-v1 True 4 2000000 neg_distance False"
   #
   # exp two-doors with hidden goals, skewed goal distribution towards top row
-  "two-doors-corrected train.py two-doors-2-agents-skewed-v0 True 4 2000000 neg_distance True"
+  "two-doors-top train.py two-doors-2-agents-skewed-v0 True 4 1000000 neg_distance False"
   #
   # exp two-doors with hidden goals, skewed goal distribution towards bottom row
-  "two-doors-corrected train.py two-doors-2-agents-skewed-v0 True 4 2000000 neg_distance True"
+  "two-doors-bottom train.py two-doors-2-agents-skewed-v1 True 4 1000000 neg_distance False"
+  #
+  # exp two-doors with hidden goals, skewed goal distribution towards top row
+  "two-doors-top-corrected train.py two-doors-2-agents-skewed-v0 True 4 1000000 neg_distance True"
+  #
+  # exp two-doors with hidden goals, skewed goal distribution towards bottom row
+  "two-doors-bottom-corrected train.py two-doors-2-agents-skewed-v0 True 4 1000000 neg_distance True"
 )
 
 # check the only input is exp-id

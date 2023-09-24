@@ -203,7 +203,7 @@ def main(args):
     ]
     if dirs["modeldir"] is not None:
         checkpoint_cb = CheckpointCallback(
-            save_freq=eval_freq, save_path=dirs["modeldir"]
+            save_freq=100000, save_path=dirs["modeldir"]
         )
         callbacks.append(checkpoint_cb)
     if dirs["videodir"] is not None and not debug:
