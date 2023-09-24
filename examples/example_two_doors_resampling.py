@@ -19,7 +19,7 @@ print(env.action_space)
 print(env.observation_space)
 
 seed = 42
-n_episodes = 50
+n_episodes = 100
 
 
 for i in range(n_episodes):
