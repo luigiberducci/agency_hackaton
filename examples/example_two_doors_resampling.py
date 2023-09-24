@@ -8,8 +8,6 @@ from envs.resampling_wrapper import CorrectedResamplingWrapper
 
 env = gym.make(
     "two-doors-2-agents-skewed-v0",
-    #goal_generator="choice",
-    #goals=envs.goal_top_bottom_rows,
     render_mode="human",
     render_fps=250,
     max_episode_steps=10,
@@ -21,7 +19,7 @@ print(env.action_space)
 print(env.observation_space)
 
 seed = 42
-n_episodes = 1000
+n_episodes = 50
 
 
 for i in range(n_episodes):
