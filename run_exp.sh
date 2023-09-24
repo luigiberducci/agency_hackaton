@@ -31,7 +31,7 @@ args=(
   "two-doors-bottom-corrected train.py two-doors-2-agents-skewed-v0 True 4 1000000 neg_distance True"
   #
   # exp two-doors with hidden goals, skewed goal distribution towards top row and altruistic reward
-  "two-doors-bottom-corrected train.py two-doors-2-agents-skewed-v0 True 4 1000000 altruistic True"
+  "two-doors-top train.py two-doors-2-agents-skewed-v0 True 4 1000000 altruistic False"
 
 )
 
