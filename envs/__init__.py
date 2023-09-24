@@ -18,6 +18,22 @@ gym.register(
     },
 )
 
+goal_include_corridor = [(x, y) for x in list(range(1, 11))+[10]*10 for y in range(1,5)]
+
+gym.register(
+    "one-door-2-agents-goal-change-v0",
+    entry_point="envs.door_env:DoorEnv",
+    kwargs={"width": 12, "height": 6, "num_agents": 2, "max_steps": 1000,
+            "goal_generator": "choice", "goals": goal_include_corridor,"goal_terminates":False},
+)
+
+gym.register(
+    "two-door-2-agents-goal-change-v0",
+    entry_point="envs.two_doors_env:TwoDoorsEnv",
+    kwargs={"width": 12, "height": 6, "num_agents": 2, "max_steps": 1000,
+            "goal_generator": "choice", "goals": goal_include_corridor,"goal_terminates":False},
+)
+
 gym.register(
     "one-door-3-agents-v0",
     entry_point="envs.door_env:DoorEnv",
