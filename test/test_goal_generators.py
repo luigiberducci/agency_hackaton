@@ -6,8 +6,12 @@ from envs.goal_generators import goal_generator_factory
 
 
 class TestGoalGenerators(unittest.TestCase):
-    _generator_modes = ["random", "fixed", "choice"]
-    _params = [{}, {"goal": (2, 2)}, {"goals": [(2, 2), (2, 3), (3, 2)]}]
+    _generator_config = {
+        "random": {},
+        "fixed": {"goal": (2, 2)},
+        "choice": {"goals": [(2, 2), (2, 3), (3, 2)]},
+        "categorical": {"goals": [(2, 2), (2, 3), (3, 2)], "logits": [0.5, 0.3, 0.2]}
+    }
 
     def _test_returned_free_space(self, gen_mode: str, **kwargs):
         """
@@ -26,6 +30,6 @@ class TestGoalGenerators(unittest.TestCase):
             self.assertTrue(env.grid.get(*goal) is None, f"the goal {goal} is not free space")
 
     def test_generator_modes(self):
-        for gen_mode, params in zip(self._generator_modes, self._params):
+        for gen_mode, params in self._generator_config.items():
             self._test_returned_free_space(gen_mode, **params)
 
