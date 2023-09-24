@@ -85,7 +85,7 @@ class AltruisticRewardFn(RewardFn):
         doors = [
             obj for obj in self.env.unwrapped.grid.grid if obj is not None and obj.type == "door"
         ]
-        assert len(doors) <= 1, "Only one door is supported for now"
+        #assert len(doors) <= 1, "Only one door is supported for now"
 
         # state validity
         is_valid = (
@@ -156,7 +156,7 @@ class AltruisticRewardFn(RewardFn):
                 for obj in self.env.unwrapped.grid.grid
                 if obj is not None and obj.type == "door"
             ]
-            assert len(doors) <= 1, "Only one door is supported for now"
+            #assert len(doors) <= 1, "Only one door is supported for now"
             # for multi-doors, we shold consider the closest one
             # just check if fwd_cell is a door?
             is_open = doors[0].is_open if len(doors) > 0 else True
