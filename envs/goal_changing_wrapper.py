@@ -29,6 +29,6 @@ class GoalChangingWrapper(gymnasium.Wrapper):
                     self.put_obj(Goal(self.world, i), *goal_pos)
                 else:
                     goal_pos = self.place_obj(Goal(self.world, i), max_tries=100)
-                self.env.unwrapped.append(goal_pos)
+                self.env.unwrapped.goals.append(goal_pos)
 
         return super().step(action)
