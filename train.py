@@ -75,9 +75,9 @@ def make_env(
         # observation wrapper
         env = RGBImgObsWrapper(env, hide_obj_types=obj_to_hide)
         env = UnwrapSingleAgentDictWrapper(env)
-        env = GrayScaleObservation(env)
 
         if stack_frames is not None:
+            env = GrayScaleObservation(env)
             env = FrameStack(env, num_stack=stack_frames)
 
         # monitor, to consistently record episode stats
