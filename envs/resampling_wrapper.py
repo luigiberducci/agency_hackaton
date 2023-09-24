@@ -117,7 +117,6 @@ class CorrectedResamplingWrapper(gym.Wrapper):
                 initial_poses, goals = self._get_initial_conditions(obs, info)
                 self.buffer.append((initial_poses, goals))
         elif np.random.rand() < self.p_resample:
-            print("resampling")
             # otherwise, resample from the buffer
             initial_poses, goals = self._resampling()
 
@@ -139,8 +138,7 @@ class CorrectedResamplingWrapper(gym.Wrapper):
         self.encoder.update(self.buffer)
         self.total_count += 1
 
-        print("buffer size: {}".format(len(self.hash_to_visit)))
-        #print("buffer", self.hash_to_visit)
+        #print(f"buffer size: {len(self.buffer)}")
         return obs, info
 
     def _resampling(self):
