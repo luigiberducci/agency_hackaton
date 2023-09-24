@@ -88,7 +88,7 @@ def make_env(
         env = RGBImgObsWrapper(env, hide_obj_types=obj_to_hide)
         env = UnwrapSingleAgentDictWrapper(env)
 
-        if stack_frames is not None:
+        if stack_frames is not None and stack_frames > 1:
             env = GrayScaleObservation(env)
             env = FrameStack(env, num_stack=stack_frames)
 
