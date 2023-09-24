@@ -15,9 +15,12 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 
 import envs
 import gymnasium as gym
+
+from envs.base_env import SimpleEnv
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
+from envs.resampling_wrapper import CorrectedResamplingWrapper
 from envs.reward_wrappers import RewardWrapper, reward_factory, RewardFn
 from helpers.callbacks import VideoRecorderCallback
 from models import MinigridFeaturesExtractor
@@ -56,11 +59,15 @@ def make_env(
     rank: int,
     reward_fn: Callable[[Env], RewardFn] | None = None,
     obj_to_hide: list[str] | None = None,
+    distr_correction: bool = False,
     seed: int = 42,
 ):
     def make() -> gym.Env:
         # base env
         env = gym.make(env_id, render_mode="rgb_array")
+
+        if distr_correction:
+            env = CorrectedResamplingWrapper(env)
 
         # reward wrapper
         if reward_fn is not None:
@@ -92,6 +99,7 @@ def main(args):
     env_id = args.env_id
     reward_id = args.reward
     obj_to_hide = ["goal"] if args.hide_goals else []
+    distr_correction = args.distr_correction
     total_timesteps = args.total_timesteps
     n_envs = args.num_envs
     algo = args.algo
@@ -144,7 +152,7 @@ def main(args):
     train_env = vec_cls(
         [
             make_env(
-                env_id, i, seed=seed, reward_fn=train_reward, obj_to_hide=obj_to_hide
+                env_id, i, seed=seed, reward_fn=train_reward, obj_to_hide=obj_to_hide, distr_correction=distr_correction
             )
             for i in range(n_envs)
         ]
@@ -153,7 +161,7 @@ def main(args):
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
     eval_env = make_env(
-        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide
+        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide, distr_correction=distr_correction
     )()
 
     # create model trainer
@@ -227,6 +235,14 @@ if __name__ == "__main__":
         nargs="?",
         const=True,
         help="Toggle partial observability by hiding goals from agents",
+    )
+    parser.add_argument(
+        "--distr-correction",
+        type=lambda x: bool(strtobool(x)),
+        default=False,
+        nargs="?",
+        const=True,
+        help="Toggle anomaly-based correction of initial distribution",
     )
 
     # algorithm params

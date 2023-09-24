@@ -94,7 +94,8 @@ class CorrectedResamplingWrapper(gym.Wrapper):
         env: SimpleEnv,
         encoder: Callable = None,
         max_buffer_size: int = 10000,
-        warmup_resets: int = 100,
+        warmup_resets: int = 250,
+        p_resample: float = 0.5,
     ):
         super().__init__(env)
 
@@ -106,6 +107,7 @@ class CorrectedResamplingWrapper(gym.Wrapper):
         self.encoder = encoder if encoder is not None else PCAEncoder()
         self.max_buffer_size = max_buffer_size
         self.warmup_resets = warmup_resets
+        self.p_resample = p_resample
 
     def reset(self, **kwargs):
         if self.total_count == 0:
@@ -114,7 +116,8 @@ class CorrectedResamplingWrapper(gym.Wrapper):
                 obs, info = super().reset(**kwargs)
                 initial_poses, goals = self._get_initial_conditions(obs, info)
                 self.buffer.append((initial_poses, goals))
-        else:
+        elif np.random.rand() < self.p_resample:
+            print("resampling")
             # otherwise, resample from the buffer
             initial_poses, goals = self._resampling()
 
@@ -124,9 +127,12 @@ class CorrectedResamplingWrapper(gym.Wrapper):
                 options = {}
 
             other_kwargs = {k: v for k, v in kwargs.items() if k != "options"}
-            options["initial_poses"] = initial_poses
-            options["goals"] = goals
+            options["initial_poses"] = [np.array(pose) for pose in initial_poses]
+            options["goals"] = [np.array(goal) if goal else None for goal in goals]
             obs, info = super().reset(options=options, **other_kwargs)
+        else:
+            obs, info = super().reset(**kwargs)
+            initial_poses, goals = self._get_initial_conditions(obs, info)
 
         # update
         self.buffer.append((initial_poses, goals))
