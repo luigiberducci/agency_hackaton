@@ -17,6 +17,7 @@ class ManualControl:
     def start(self):
         """Start the window display with blocking event loop"""
         self.reset(self.seed)
+        self.render()
 
         while not self.closed:
             for event in pygame.event.get():
@@ -26,6 +27,7 @@ class ManualControl:
                 if event.type == pygame.KEYDOWN:
                     event.key = pygame.key.name(int(event.key))
                     self.key_handler(event)
+                    self.render()
 
     def step(self, action: Actions):
         _, reward, terminated, truncated, _ = self.env.step(action)
@@ -37,12 +39,9 @@ class ManualControl:
         elif truncated:
             print("truncated!")
             self.reset(self.seed)
-        else:
-            self.env.render()
 
     def reset(self, seed=None):
         self.env.reset(seed=seed)
-        self.env.render()
 
     def key_handler(self, event):
         key: str = event.key
@@ -50,10 +49,10 @@ class ManualControl:
 
         if key == "escape":
             self.env.close()
-            return
+            return False
         if key == "backspace":
             self.reset()
-            return
+            return True
 
         key_to_action = {
             "left": Actions.left,
@@ -75,3 +74,8 @@ class ManualControl:
                 warnings.warn(f"Exception: {e}")
         else:
             print(key)
+
+        return True
+
+    def render(self):
+        return self.env.render()

@@ -1,8 +1,10 @@
 # AI Agency Hackaton (Sep 2023)
 
-Using Python 3.10
+![two-doors-env](docs/sequence_example.svg)
 
 ## Installation
+
+We are using Python 3.10.
 
 Configure submodules with:
 ```bash
