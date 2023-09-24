@@ -64,10 +64,11 @@ def make_env(
     goal_changes: float = 0.0,
     distr_correction: bool = False,
     seed: int = 42,
+    render_mode: str = "rgb_array",
 ):
     def make() -> gym.Env:
         # base env
-        env = gym.make(env_id, render_mode="rgb_array")
+        env = gym.make(env_id, render_mode=render_mode)
 
         # correct distribution initial conditions
         if distr_correction:
