@@ -177,7 +177,7 @@ def main(args):
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
     eval_env = make_env(
-        env_id=env_id, rank=0, seed=seed, reward_fn=train_reward,
+        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward,
         distr_correction=distr_correction, goal_changes=goal_changes,
         obj_to_hide=obj_to_hide, stack_frames=stack_frames,
     )()
