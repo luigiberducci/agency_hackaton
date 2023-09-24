@@ -1,6 +1,6 @@
 #!/bin/bash
 
-logdir=logs/distr
+logdir=logs/two-doors
 
 # create list of exp arguments
 args=(
