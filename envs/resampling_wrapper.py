@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from collections import deque
 from typing import Callable
 
 import gym
@@ -8,25 +9,72 @@ from envs.base_env import SimpleEnv
 from envs.goal_generators import softmax
 from sklearn.decomposition import PCA
 
+
+PRETRAIN_SAMPLES = 1000
+
 class Encoder:
     @abstractmethod
     def __call__(self, x):
         raise NotImplementedError
 
     @abstractmethod
-    def update(self, X):
+    def update(self, x):
         raise NotImplementedError
 
 
 class PCAEncoder(Encoder):
-    def __init__(self, n_components=2):
+    def __init__(self, n_components=1):
         self.pca = PCA(n_components=n_components)
+        self.X = None
 
     def __call__(self, x):
+        x = np.array(x).reshape(1, -1)
+        #self._plot()
         return self.pca.transform(x)
 
-    def update(self, X):
-        self.pca.fit(X)
+    def anomaly_score(self, buffer):
+        all_goals = [x[1] for x in buffer]
+        clean_goals = [goal[1] for goal in all_goals]
+        X = np.array(clean_goals).reshape(-1, 2)
+        y = self.pca.transform(X)
+        X_hat = self.pca.inverse_transform(y)
+        return np.linalg.norm(X - X_hat, axis=1)
+
+    def update(self, buffer):
+        all_goals = [x[1] for x in buffer]
+        clean_goals = [goal[1] for goal in all_goals]
+        self.X = np.array(clean_goals).reshape(-1, 2)
+        self.pca.fit(self.X)
+
+    def _plot(self):
+        raise NotImplementedError
+        import matplotlib.pyplot as plt
+        noisy_X = self.X + np.random.normal(0, 0.1, size=self.X.shape)
+        anomaly_scores = [self.anomaly_score(x) for x in noisy_X]
+
+        anomaly_colors = anomaly_scores / np.max(anomaly_scores)
+        # create rgb colors based on anomaly scores
+        anomaly_colors = np.array([np.array([1, 0, 0]) * (1 - c) +
+                                   np.array([0, 1, 0]) * c for c in anomaly_colors])
+
+
+        plt.scatter(noisy_X[:, 0], noisy_X[:, 1], alpha=0.3, label="samples", color=anomaly_colors)
+        for i, (comp, var) in enumerate(zip(self.pca.components_, self.pca.explained_variance_)):
+            comp = comp * var  # scale component by its variance explanation power
+            plt.plot(
+                [0, comp[0]],
+                [0, comp[1]],
+                label=f"Component {i}",
+                linewidth=5,
+            )
+        plt.gca().set(
+            aspect="equal",
+            title="2-dimensional dataset with principal components",
+            xlabel="first feature",
+            ylabel="second feature",
+        )
+        plt.legend()
+        plt.show()
 
 class CorrectedResamplingWrapper(gym.Wrapper):
     """
@@ -45,51 +93,63 @@ class CorrectedResamplingWrapper(gym.Wrapper):
         self,
         env: SimpleEnv,
         encoder: Callable = None,
-        max_buffer_size: int = 1000,
-        warmup_episodes: int = 2,
+        max_buffer_size: int = 10000,
+        warmup_resets: int = 100,
     ):
         super().__init__(env)
 
+        self.buffer = deque(maxlen=max_buffer_size)
         self.hash_to_visit = {}  # visit table: hash -> count
         self.hash_to_cond = {}  # reconstruct condition from hash
         self.total_count = 0
 
-        self.encoder = encoder if encoder is not None else g_hashing_fn
+        self.encoder = encoder if encoder is not None else PCAEncoder()
         self.max_buffer_size = max_buffer_size
-        self.warmup_episodes = warmup_episodes
+        self.warmup_resets = warmup_resets
 
     def reset(self, **kwargs):
-        if len(self.hash_to_visit) < self.warmup_episodes:
-            # if we are still in the warmup phase, do not resample
-            obs, info = super().reset(**kwargs)
+        if self.total_count == 0:
+            # collect few episodes to inizialize encoder
+            for _ in range(self.warmup_resets):
+                obs, info = super().reset(**kwargs)
+                initial_poses, goals = self._get_initial_conditions(obs, info)
+                self.buffer.append((initial_poses, goals))
         else:
-            # otherwise, resample from buffer
-            # compute probabilities
-            all_conditions = list(self.hash_to_visit.keys())
-            logits = np.array(
-                [
-                    1 / np.sqrt(self.hash_to_visit[cond] / self.total_count + 0.01)
-                    for cond in all_conditions
-                ]
-            )
-            probs = softmax(logits)
+            # otherwise, resample from the buffer
+            initial_poses, goals = self._resampling()
 
-            # sample from distribution
-            idx = np.random.choice(len(all_conditions), p=probs)
-            hash_key = all_conditions[idx]
-            initial_poses, goals = self.hash_to_cond[hash_key]
+            if "options" in kwargs and kwargs["options"] is not None:
+                options = kwargs["options"]
+            else:
+                options = {}
 
-            options = (
-                kwargs["options"]
-                if "options" in kwargs and kwargs["options"] is not None
-                else {}
-            )
             other_kwargs = {k: v for k, v in kwargs.items() if k != "options"}
             options["initial_poses"] = initial_poses
             options["goals"] = goals
             obs, info = super().reset(options=options, **other_kwargs)
 
-        # extract initial conditions
+        # update
+        self.buffer.append((initial_poses, goals))
+        self.encoder.update(self.buffer)
+        self.total_count += 1
+
+        print("buffer size: {}".format(len(self.hash_to_visit)))
+        #print("buffer", self.hash_to_visit)
+        return obs, info
+
+    def _resampling(self):
+        scores = self.encoder.anomaly_score(self.buffer)
+        assert len(scores) == len(self.buffer)
+        probs = softmax(scores)
+
+        # sample from distribution
+        indices = np.arange(len(self.buffer))
+        idx = np.random.choice(indices, p=probs)
+        initial_poses, goals = self.buffer[idx]
+
+        return initial_poses, goals
+
+    def _get_initial_conditions(self, obs, info):
         initial_poses = tuple(
             [
                 (
@@ -101,36 +161,7 @@ class CorrectedResamplingWrapper(gym.Wrapper):
             ]
         )
         goals = tuple([info[agent_id]["goal"] for agent_id in obs])
-
-        # update buffer
-        initial_conditions = (initial_poses, goals)
-        hash_key = self.encoder(initial_conditions)
-        if hash_key not in self.hash_to_visit:
-            # if buffer is full, discard current initial conditions with prob 1/len(buffer)
-            # otherwise, remove a random entry from the buffer
-            if len(self.hash_to_visit) < self.max_buffer_size:
-                self.hash_to_visit[hash_key] = 1
-                self.hash_to_cond[hash_key] = initial_conditions
-            else:
-                # if max capacity, remove with equal probability one of the entries (including the current one)
-                if np.random.random() < 1 / (len(self.hash_to_visit) + 1):
-                    pass
-                else:
-                    idx = np.random.choice(len(self.hash_to_visit))
-                    del self.hash_to_visit[idx]
-                    del self.hash_to_cond[idx]
-                self.hash_to_visit[hash_key] = 1
-                self.hash_to_cond[hash_key] = initial_conditions
-        else:
-            self.hash_to_visit[hash_key] += 1
-            self.hash_to_cond[hash_key] = initial_conditions
-
-        self.total_count += 1
-
-        print("buffer size: {}".format(len(self.hash_to_visit)))
-        print("buffer", self.hash_to_visit)
-        return obs, info
-
+        return initial_poses, goals
 
 def g_hashing_fn(initial_conditions: tuple) -> str:
     """
