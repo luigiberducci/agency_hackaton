@@ -7,14 +7,14 @@ args=(
   # exp-name script env-id hide-goals num-envs tot-steps reward distr-correction
   #
   # exp one-door with hidden goals
-  "one-door train.py one-door-2-agents-v0 True 4 2000000 sparse False"
-  "one-door train.py one-door-2-agents-v0 True 4 2000000 altruistic False"
-  "one-door train.py one-door-2-agents-v0 True 4 2000000 neg_distance False"
+  "one-door-xl train.py one-door-2-agents-v0 True 4 2000000 sparse False"
+  "one-door-xl train.py one-door-2-agents-v0 True 4 2000000 altruistic False"
+  "one-door-xl train.py one-door-2-agents-v0 True 4 2000000 neg_distance False"
   #
   # exp one-door with visible goals
-  "one-door train.py one-door-2-agents-v0 False 4 2000000 sparse False"
-  "one-door train.py one-door-2-agents-v0 False 4 2000000 altruistic False"
-  "one-door train.py one-door-2-agents-v0 False 4 2000000 neg_distance False"
+  "one-door-xl train.py one-door-2-agents-v0 False 4 2000000 sparse False"
+  "one-door-xl train.py one-door-2-agents-v0 False 4 2000000 altruistic False"
+  "one-door-xl train.py one-door-2-agents-v0 False 4 2000000 neg_distance False"
   #
   #
   # exp two-doors with hidden goals, skewed goal distribution towards top row
