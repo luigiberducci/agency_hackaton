@@ -26,24 +26,26 @@ class TwoDoorsEnv(SimpleEnv):
         self.grid.vert_wall(self.world, width - 1, 0)
 
         # Generate vertical separation wall
-        self.grid.vert_wall(self.world, 6, 0)
+        wall_x = int(self.width * 1 / 3)
+        self.grid.vert_wall(self.world, wall_x, 0)
 
         # Generate second vertical separation wall (almost complete)
         for i in range(0, height - 2):
-            self.grid.set(12, i, Wall(self.world))
+            self.grid.set(self.width - 3, i, Wall(self.world))
 
-        # Place the two doors and key
+        # Place the two doors
         door1 = Door(self.world, COLOR_NAMES[0], is_locked=True, is_open=False)
-        door1.init_pos = door1.cur_pos = (6, 1)
+        door1.init_pos = door1.cur_pos = wall_x, self.height - 2
         self.grid.set(*door1.cur_pos, door1)
 
         door2 = Door(self.world, COLOR_NAMES[0], is_locked=True, is_open=False)
-        door2.init_pos = door2.cur_pos = (6, 5)
+        door2.init_pos = door2.cur_pos = wall_x, 1
         self.grid.set(*door2.cur_pos, door2)
 
+        # Place the key
         key = Key(self.world, COLOR_NAMES[0])
-        key.init_pos = key.cur_pos = (13, 1)
-        self.grid.set(*key.cur_pos, key)
+        key.init_pos = key.cur_pos = (self.width - 2, 1)
+        self.grid.set(*key.init_pos, key)
 
         self.goals = []
 
