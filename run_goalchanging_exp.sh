@@ -5,9 +5,9 @@ logdir=logs/
 # create list of exp arguments
 args=(
 
-  "changing-goal-FS0-0.1 train.py two-door-2-agents-goal-change-v0 True 4 1000000 neg_distance 0.1 0"
   "changing-goal-FS4-0.1 train.py two-door-2-agents-goal-change-v0 True 4 1000000 neg_distance 0.1 4"
   "changing-goal-FS4-0.1 train.py two-door-2-agents-goal-change-v0 True 4 1000000 neg_distance 0 4"
+  "changing-goal-FS0-0.1 train.py two-door-2-agents-goal-change-v0 True 4 1000000 neg_distance 0.1 0"
   "changing-goal-FS4-0.1 train.py two-door-2-agents-goal-change-v0 False 4 1000000 neg_distance 0.1 4"
   "changing-goal-FS4-0.1 train.py two-door-2-agents-goal-change-v0 True 4 1000000 neg_distance 0.3 4"
 
