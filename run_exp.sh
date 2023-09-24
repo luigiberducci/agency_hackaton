@@ -1,35 +1,34 @@
 #!/bin/bash
 
-logdir=logs/
+logdir=logs/distr
 
 # create list of exp arguments
 args=(
-  # exp-name script env-id hide-goals num-envs tot-steps reward
+  # exp-name script env-id hide-goals num-envs tot-steps reward distr-correction
   #
-  # exp one-door with hidden goals
-  "one-door train.py one-door-2-agents-v0 True 4 1000000 sparse"
-  "one-door train.py one-door-2-agents-v0 True 4 1000000 altruistic"
-  "one-door train.py one-door-2-agents-v0 True 4 1000000 neg_distance"
+  # exp two-doors with visible vs hidden goals
+  #"one-door train.py one-door-2-agents-v0 True 4 1000000 sparse False"
+  #"one-door train.py one-door-2-agents-v0 True 4 1000000 altruistic False"
+  #"one-door train.py one-door-2-agents-v0 True 4 1000000 neg_distance False"
+  "two-doors train.py one-door-2-agents-v0 True 4 1000000 neg_distance False"
   #
-  # exp one-door with visible goals
-  "one-door train.py one-door-2-agents-v0 False 4 1000000 sparse"
-  "one-door train.py one-door-2-agents-v0 False 4 1000000 altruistic"
-  "one-door train.py one-door-2-agents-v0 False 4 1000000 neg_distance"
+  #"one-door train.py one-door-2-agents-v0 False 4 1000000 sparse False"
+  #"one-door train.py one-door-2-agents-v0 False 4 1000000 altruistic False"
+  #"one-door train.py one-door-2-agents-v0 False 4 1000000 neg_distance False"
+  "two-doors train.py one-door-2-agents-v0 False 4 1000000 neg_distance False"
   #
-  # exp two-doors with hidden goals, uniform goal distribution (binomial in y coord)
-  "two-doors train.py two-doors-2-agents-v0 True 4 1000000 sparse"
-  "two-doors train.py two-doors-2-agents-v0 True 4 1000000 altruistic"
-  "two-doors train.py two-doors-2-agents-v0 True 4 1000000 neg_distance"
   #
   # exp two-doors with hidden goals, skewed goal distribution towards top row
-  "two-doors train.py two-doors-2-agents-skewed-v0 True 4 1000000 sparse"
-  "two-doors train.py two-doors-2-agents-skewed-v0 True 4 1000000 altruistic"
-  "two-doors train.py two-doors-2-agents-skewed-v0 True 4 1000000 neg_distance"
+  "two-doors-top train.py two-doors-2-agents-skewed-v0 True 4 1000000 neg_distance False"
   #
   # exp two-doors with hidden goals, skewed goal distribution towards bottom row
-  "two-doors train.py two-doors-2-agents-skewed-v1 True 4 1000000 sparse"
-  "two-doors train.py two-doors-2-agents-skewed-v1 True 4 1000000 altruistic"
-  "two-doors train.py two-doors-2-agents-skewed-v1 True 4 1000000 neg_distance"
+  "two-doors-bottom train.py two-doors-2-agents-skewed-v1 True 4 1000000 neg_distance False"
+  #
+  # exp two-doors with hidden goals, skewed goal distribution towards top row
+  "two-doors-top-corrected train.py two-doors-2-agents-skewed-v0 True 4 1000000 neg_distance True"
+  #
+  # exp two-doors with hidden goals, skewed goal distribution towards bottom row
+  "two-doors-bottom-corrected train.py two-doors-2-agents-skewed-v0 True 4 1000000 neg_distance True"
 )
 
 # check the only input is exp-id
@@ -57,11 +56,13 @@ hide_goals=$(echo $exp_args | cut -d' ' -f4)  # whether to hide goals from agent
 nenvs=$(echo $exp_args | cut -d' ' -f5)   # num-envs for vectorization
 nsteps=$(echo $exp_args | cut -d' ' -f6)  # total training steps
 reward=$(echo $exp_args | cut -d' ' -f7)  # reward type as defined in envs.reward_wrappers.reward_factory
+distr_correction=$(echo $exp_args | cut -d' ' -f8)  # whether to use distribution correction
 
 
 cmd="
 python ${script} --log-dir ${logdir}/${exp_name} --env-id ${env_id} --num-envs ${nenvs} \
-                 --total-timesteps ${nsteps} --reward ${reward} --hide-goals=${hide_goals}
+                 --total-timesteps ${nsteps} --reward ${reward} --hide-goals=${hide_goals} \
+                 --distr-correction=${distr_correction}
 "
 
 echo $cmd
