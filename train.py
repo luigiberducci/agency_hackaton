@@ -15,13 +15,14 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 
 import envs
 import gymnasium as gym
-
-from envs.base_env import SimpleEnv
+from gymnasium.wrappers import GrayScaleObservation
+from gymnasium.wrappers.frame_stack import FrameStack
 from envs.control_wrapper import AutoControlWrapper
 from envs.control_wrapper import UnwrapSingleAgentDictWrapper
 from envs.observation_wrapper import RGBImgObsWrapper
 from envs.resampling_wrapper import CorrectedResamplingWrapper
 from envs.reward_wrappers import RewardWrapper, reward_factory, RewardFn
+from envs.goal_changing_wrapper import GoalChangingWrapper
 from helpers.callbacks import VideoRecorderCallback
 from models import MinigridFeaturesExtractor
 
@@ -59,6 +60,8 @@ def make_env(
     rank: int,
     reward_fn: Callable[[Env], RewardFn] | None = None,
     obj_to_hide: list[str] | None = None,
+    stack_frames: int | None = None,
+    goal_changes: float = 0.0,
     distr_correction: bool = False,
     seed: int = 42,
 ):
@@ -66,8 +69,13 @@ def make_env(
         # base env
         env = gym.make(env_id, render_mode="rgb_array")
 
+        # correct distribution initial conditions
         if distr_correction:
             env = CorrectedResamplingWrapper(env)
+
+        # goal changing wrapper
+        if goal_changes:
+            env = GoalChangingWrapper(env, p_change=goal_changes)
 
         # reward wrapper
         if reward_fn is not None:
@@ -79,6 +87,10 @@ def make_env(
         # observation wrapper
         env = RGBImgObsWrapper(env, hide_obj_types=obj_to_hide)
         env = UnwrapSingleAgentDictWrapper(env)
+
+        if stack_frames is not None:
+            env = GrayScaleObservation(env)
+            env = FrameStack(env, num_stack=stack_frames)
 
         # monitor, to consistently record episode stats
         env = Monitor(env)  # keep it here, otherwise issue with vec env termination
@@ -98,8 +110,10 @@ def make_trainer(algo: str):
 def main(args):
     env_id = args.env_id
     reward_id = args.reward
-    obj_to_hide = ["goal"] if args.hide_goals else []
     distr_correction = args.distr_correction
+    goal_changes = args.goal_changes
+    obj_to_hide = ["goal"] if args.hide_goals else []
+    stack_frames = args.stack_frames
     total_timesteps = args.total_timesteps
     n_envs = args.num_envs
     algo = args.algo
@@ -152,7 +166,9 @@ def main(args):
     train_env = vec_cls(
         [
             make_env(
-                env_id, i, seed=seed, reward_fn=train_reward, obj_to_hide=obj_to_hide, distr_correction=distr_correction
+                env_id=env_id, rank=i, seed=seed, reward_fn=train_reward,
+                distr_correction=distr_correction, goal_changes=goal_changes,
+                obj_to_hide=obj_to_hide, stack_frames=stack_frames,
             )
             for i in range(n_envs)
         ]
@@ -161,7 +177,9 @@ def main(args):
     # create evaluation environment
     eval_reward = reward_factory(reward="sparse")
     eval_env = make_env(
-        env_id=env_id, rank=0, seed=42, reward_fn=eval_reward, obj_to_hide=obj_to_hide, distr_correction=distr_correction
+        env_id=env_id, rank=0, seed=seed, reward_fn=train_reward,
+        distr_correction=distr_correction, goal_changes=goal_changes,
+        obj_to_hide=obj_to_hide, stack_frames=stack_frames,
     )()
 
     # create model trainer
@@ -229,6 +247,12 @@ if __name__ == "__main__":
         help="Reward function to use during training, during evaluation 'sparse' reward is always used",
     )
     parser.add_argument(
+        "--goal-changes",
+        type=float,
+        default=0.0,
+        help="Probability of changing the goal"
+    )
+    parser.add_argument(
         "--hide-goals",
         type=lambda x: bool(strtobool(x)),
         default=True,
@@ -243,6 +267,9 @@ if __name__ == "__main__":
         nargs="?",
         const=True,
         help="Toggle anomaly-based correction of initial distribution",
+    )
+    parser.add_argument(
+        "--stack-frames", type=int, default=None, help="Number of frames to stack"
     )
 
     # algorithm params

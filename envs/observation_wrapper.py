@@ -43,7 +43,7 @@ class RGBImgObsWrapper(gym.core.ObservationWrapper):
             )
 
     def observation(self, obs):
-        rgb_img = self.get_frame(
+        rgb_img = self.unwrapped.get_frame(
             highlight=self.unwrapped.highlight, tile_size=self.tile_size,
             hide_obj_types=self.hide_obj_types
         )

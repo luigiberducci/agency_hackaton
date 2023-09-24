@@ -6,4 +6,5 @@ gymnasium
 pygame
 moviepy
 scikit-learn
+opencv-python
 ./gym-multigrid

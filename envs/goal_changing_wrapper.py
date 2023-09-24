@@ -17,18 +17,18 @@ class GoalChangingWrapper(gymnasium.Wrapper):
         self, action: Any
     ) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
         if np.random.random() < self.p_change:
-            self.env.goals = []
-            self.env.grid.grid = [
-                obj if not isinstance(obj, Goal) else None for obj in self.env.grid.grid
+            self.env.unwrapped.goals = []
+            self.env.unwrapped.grid.grid = [
+                obj if not isinstance(obj, Goal) else None for obj in self.env.unwrapped.grid.grid
             ]
             for i in range(self.num_agents):
                 if i == 0:
                     goal_pos = None
-                elif self.env.goal_generator is not None:
+                elif hasattr(self.env, "goal_generator") and self.env.goal_generator:
                     goal_pos = self.env.goal_generator(self, agent_id=f"agent_{i}")
                     self.put_obj(Goal(self.world, i), *goal_pos)
                 else:
                     goal_pos = self.place_obj(Goal(self.world, i), max_tries=100)
-                self.env.goals.append(goal_pos)
+                self.env.unwrapped.goals.append(goal_pos)
 
         return super().step(action)
