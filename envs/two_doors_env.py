@@ -59,11 +59,11 @@ class TwoDoorsEnv(SimpleEnv):
             top = size = None
             if i == 0:
                 # the first agent (altruistic) must be on the right side of the wall
-                top = (7, 1)
-                size = (7, 5)
+                top = (wall_x + 1, 1)
+                size = (wall_x + 1, 5)
             else:
                 top = (1, 1)
-                size = (5, 5)
+                size = (wall_x - 1, 5)
 
             if self.initial_poses is not None:
                 init_pose = self.initial_poses[i]
